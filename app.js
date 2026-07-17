@@ -1,4 +1,16 @@
-// Global State
+if (tabId === 'model2-tab') {
+      const placeholder3 = document.getElementById('g3d-visualizer-placeholder-tab3');
+      const wrapper = document.getElementById('g3d-visualizer-wrapper');
+      if (placeholder3 && wrapper) placeholder3.appendChild(wrapper);
+      if (!window.g3dInitialized) setupGantry3D();
+      setTimeout(resizeGantry3D, 100);
+    } else if (tabId === 'calculator-tab') {
+      const placeholder2 = document.getElementById('g3d-visualizer-placeholder-tab2');
+      const wrapper = document.getElementById('g3d-visualizer-wrapper');
+      if (placeholder2 && wrapper) placeholder2.appendChild(wrapper);
+      if (!window.g3dInitialized) setupGantry3D();
+      setTimeout(resizeGantry3D, 100);
+    }// Global State
 window.g3dColumns = [];
 window.g3dIsSweeping = false;
 window.g3dSweepAngle = 0;
@@ -173,7 +185,7 @@ function calculate() {
 
 // 3. Three.js 3D Visualizer
 function setupGantry3D() {
-    let g3dContainer = document.getElementById('g3d-visualizer-wrapper') || document.getElementById('canvas3d-three');
+    let g3dContainer = document.getElementById('canvas3d-three');
     if (!g3dContainer || window.g3dInitialized) return;
     window.g3dInitialized = true;
 
@@ -319,7 +331,7 @@ function rebuildGantryMechanicals() {
             const fovEdges = new THREE.EdgesGeometry(fovGeo);
             const fovMat = new THREE.LineBasicMaterial({ color: 0x3b82f6 });
             const fov = new THREE.LineSegments(fovEdges, fovMat);
-            fov.rotation.x = -Math.PI / 2;
+            fov.rotation.x = Math.PI / 2;
             
             // Align FOV with camera (which is rotated parallel to person)
             fov.position.z = -wd / 2;
