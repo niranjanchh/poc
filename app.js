@@ -23,7 +23,7 @@ function switchTab(tabId) {
     const targetBtn = document.getElementById(btnId);
     if (targetBtn) targetBtn.classList.add('active');
 
-    if (tabId === 'model2-tab') {
+    if (tabId === 'model2-tab' || tabId === 'calculator-tab') {
       if (!window.g3dInitialized) setupGantry3D();
       setTimeout(resizeGantry3D, 100);
     }
@@ -31,22 +31,26 @@ function switchTab(tabId) {
 
 // 2. Calculations
 
+
 function calculate() {
-    const isModel2 = document.getElementById('model2-tab') && document.getElementById('model2-tab').style.display !== 'none';
+    const isModel2 = document.getElementById('model2-tab') && document.getElementById('model2-tab').classList.contains('active');
     const prefix = isModel2 ? 'm2-' : '';
 
-    const wdBox = document.getElementById(prefix + 'wdBox');
-    const flBox = document.getElementById(prefix + 'flBox');
-    const apBox = document.getElementById(prefix + 'apBox');
-    const cocBox = document.getElementById(prefix + 'cocBox');
-    const swEl = document.getElementById(prefix + 'sw');
-    const shEl = document.getElementById(prefix + 'sh');
-    const pxwEl = document.getElementById(prefix + 'pxw');
-    const pixelSizeEl = document.getElementById(prefix + 'pixelSize');
-    const reqResBox = document.getElementById(prefix + 'reqResBox');
-    const patientEnvHEl = document.getElementById(prefix + 'patientEnvH');
-    const camsSlider = document.getElementById(prefix + 'g3dColCamsSlider');
-    const overlapEl = document.getElementById(prefix + 'overlapY') || document.getElementById('overlapY');
+    const wdBox = document.getElementById(prefix + 'wdBox') || document.getElementById('wdBox');
+    const flBox = document.getElementById(prefix + 'flBox') || document.getElementById('flBox');
+    const apBox = document.getElementById(prefix + 'apBox') || document.getElementById('apBox');
+    const cocBox = document.getElementById(prefix + 'cocBox') || document.getElementById('cocBox');
+    const swEl = document.getElementById(prefix + 'sw') || document.getElementById('sw');
+    const shEl = document.getElementById(prefix + 'sh') || document.getElementById('sh');
+    const pxwEl = document.getElementById(prefix + 'pxw') || document.getElementById('pxw');
+    const pxhEl = document.getElementById(prefix + 'pxh') || document.getElementById('pxh');
+    const pixelSizeEl = document.getElementById(prefix + 'pixelSize') || document.getElementById('pixelSize');
+    const reqResBox = document.getElementById(prefix + 'reqResBox') || document.getElementById('reqResBox');
+    const patientEnvHEl = document.getElementById(prefix + 'patientEnvH') || document.getElementById('patientEnvH');
+    const patientEnvWEl = document.getElementById(prefix + 'patientEnvW') || document.getElementById('patientEnvW');
+    const camsSlider = document.getElementById(prefix + 'g3dColCamsSlider') || document.getElementById('g3dColCamsSlider');
+    const overlapEl = document.getElementById(prefix + 'overlapX') || document.getElementById('overlapX') || {value: 15};
+    const numColumnsEl = document.getElementById(prefix + 'numColumns') || document.getElementById('numColumns') || {value: isModel2 ? 2 : 1};
 
     if (!wdBox || !flBox) return;
 
@@ -57,84 +61,112 @@ function calculate() {
     const sensorW = parseFloat(swEl.value) || 46.15;
     const sensorH = parseFloat(shEl.value) || 32.87;
     const pxw = parseFloat(pxwEl?.value) || 13392;
+    const pxh = parseFloat(pxhEl?.value) || 9528;
+    const pixelSizeUm = parseFloat(pixelSizeEl?.value) || 3.45;
     const reqRes = parseFloat(reqResBox?.value) || 30;
     const patientEnvH = parseFloat(patientEnvHEl?.value) || 2.0;
-    const overlapY = parseFloat(overlapEl?.value) || 15;
-    const numCams = parseInt(camsSlider?.value) || 5;
+    const patientEnvW = parseFloat(patientEnvWEl?.value) || 1.0;
+    const overlapPercent = parseFloat(overlapEl?.value) || 15;
+    const overlapFrac = overlapPercent / 100;
+    let numCams = parseInt(camsSlider?.value) || 5;
+    const numColumns = isModel2 ? (parseInt(numColumnsEl?.value) || 2) : 1;
 
     // Magnification & FOV
     const magnification = fl / Math.max(0.1, (wd - fl));
     const fovW = sensorW / magnification;
     const fovH = sensorH / magnification;
 
-    const fovVal = document.getElementById(prefix + 'fov-val');
-    const fovHVal = document.getElementById(prefix + 'fov-h-val');
-    const fovVal2 = document.getElementById(prefix + 'fovVal2');
-    const fovHVal2 = document.getElementById(prefix + 'fovHVal2');
-    if (fovVal) fovVal.textContent = fovW.toFixed(1);
-    if (fovHVal) fovHVal.textContent = fovH.toFixed(1);
-    if (fovVal2) fovVal2.textContent = fovW.toFixed(1);
-    if (fovHVal2) fovHVal2.textContent = fovH.toFixed(1);
+    const setText = (id, text) => { const el = document.getElementById(id); if (el) el.innerHTML = text; };
 
-    // Resolution
-    const geoResVal = pxw / fovW;
-    const geoResEl = document.getElementById(prefix + 'geo-res');
-    const geoResStatus = document.getElementById(prefix + 'geo-res-status');
-    if (geoResEl) geoResEl.textContent = geoResVal.toFixed(1) + ' px/mm';
+    setText(prefix + 'fovVal', fovW.toFixed(1));
+    setText(prefix + 'fovHVal', fovH.toFixed(1));
+    setText(prefix + 'fovVal2', fovW.toFixed(1));
+    setText(prefix + 'fovHVal2', fovH.toFixed(1));
+
+    // Density (H) & (V)
+    const geoResH = pxw / fovW;
+    const geoResV = pxh / fovH;
+    const minRes = Math.min(geoResH, geoResV);
+
+    setText(prefix + 'geoResH', geoResH.toFixed(1));
+    setText(prefix + 'geoResV', geoResV.toFixed(1));
+    setText(prefix + 'geoRes', minRes.toFixed(1));
+
+    const geoResStatus = document.getElementById(prefix + 'geoResStatus');
     if (geoResStatus) {
-        if (geoResVal >= reqRes) {
+        if (minRes >= reqRes) {
             geoResStatus.textContent = 'PASS';
-            geoResStatus.className = 'status-pass';
+            geoResStatus.className = 'badge status-pass';
         } else {
             geoResStatus.textContent = 'FAIL';
-            geoResStatus.className = 'status-fail';
+            geoResStatus.className = 'badge status-fail';
         }
     }
+
+    // Total Array FOV
+    const totalFovW = fovW * numColumns * (1 - overlapFrac) + (fovW * overlapFrac);
+    const totalFovH = fovH * numCams * (1 - overlapFrac) + (fovH * overlapFrac);
+    setText(prefix + 'totalArrayFov', totalFovW.toFixed(0) + ' x ' + totalFovH.toFixed(0) + ' mm');
+    setText(prefix + 'totalFovText', totalFovW.toFixed(0) + ' mm &times; ' + totalFovH.toFixed(0) + ' mm');
+
+    // Avg Envelope Density
+    // The density at the envelope limits is reduced by distance
+    const trackRadius = wd + (patientEnvW * 1000) / 2;
+    const maxDist = trackRadius;
+    const minM = fl / Math.max(0.1, (maxDist - fl));
+    const minGeoRes = pxw / (sensorW / minM);
+    const avgEnvDensity = (geoResH + minGeoRes) / 2;
+    setText(prefix + 'avgEnvDensity', avgEnvDensity.toFixed(1));
 
     // Depth of Field
     const hyperfocal = (fl * fl) / (ap * coc) + fl;
     const dn = (wd * (hyperfocal - fl)) / (hyperfocal + wd - 2*fl);
     const df = (wd * (hyperfocal - fl)) / (hyperfocal - wd);
     let dof = df - dn;
-    if (df < 0 || isNaN(dof)) dof = 9999; // Infinity
+    
+    setText(prefix + 'nearLimit', dn.toFixed(1) + ' mm');
+    if (df < 0 || isNaN(dof)) {
+        dof = 9999;
+        setText(prefix + 'farLimit', '&infin;');
+    } else {
+        setText(prefix + 'farLimit', df.toFixed(1) + ' mm');
+    }
+    
     const dofEl = document.getElementById(prefix + 'singleDOF');
-    if (dofEl) dofEl.textContent = dof > 1000 ? '> 1000 mm' : dof.toFixed(1) + ' mm';
+    if (dofEl) dofEl.innerHTML = dof > 1000 ? '&gt; 1000 mm' : dof.toFixed(1) + ' mm';
 
     // Diffraction Blur
     const diffBlur = 1.342 * ap;
-    const diffEl = document.getElementById(prefix + 'diff-blur');
-    const diffStatus = document.getElementById(prefix + 'diff-status');
-    const pixelSizeUm = parseFloat(pixelSizeEl?.value) || 3.45;
-    if (diffEl) diffEl.textContent = diffBlur.toFixed(2) + ' μm';
+    setText(prefix + 'diffBlur', diffBlur.toFixed(2));
+    const diffStatus = document.getElementById(prefix + 'diffStatus');
     if (diffStatus) {
         if (diffBlur <= pixelSizeUm * 2) {
             diffStatus.textContent = 'PASS';
-            diffStatus.className = 'status-pass';
+            diffStatus.className = 'badge status-pass';
         } else {
             diffStatus.textContent = 'WARNING';
-            diffStatus.className = 'status-warn';
+            diffStatus.className = 'badge status-warn';
         }
     }
 
     // Vertical Cams & Motor Steps
-    const effFovH = fovH * (1 - overlapY/100);
+    const effFovH = fovH * (1 - overlapFrac);
     const totalTravel = patientEnvH * 1000;
-    const minCams = Math.ceil(totalTravel / effFovH);
-    const vertCamsEl = document.getElementById(prefix + 'verticalCamsNeededVal');
-    if (vertCamsEl) vertCamsEl.textContent = minCams;
+    const minCamsNeeded = Math.ceil(totalTravel / effFovH);
+    setText(prefix + 'verticalCamsNeededVal', minCamsNeeded);
+    
+    // Auto-update slider if we are in auto mode or just bind it
+    if (numCams < minCamsNeeded) {
+        // Just for display, we don't force the slider unless it's strictly required by UI design
+    }
 
-    const stackSizeEl = document.getElementById(prefix + 'stackSize');
-    if (stackSizeEl) stackSizeEl.textContent = '3 images';
-
-    const motorStepsEl = document.getElementById(prefix + 'motorStepsVal');
-    const motorStepSizeEl = document.getElementById(prefix + 'motorStepSizeVal');
-    const motorTotalEl = document.getElementById(prefix + 'motorTotalTravelVal');
-    if (motorStepsEl) motorStepsEl.textContent = numCams;
-    if (motorStepSizeEl) motorStepSizeEl.textContent = (totalTravel / numCams).toFixed(1);
-    if (motorTotalEl) motorTotalEl.textContent = totalTravel.toFixed(1);
+    setText(prefix + 'stackSize', '3 images');
+    setText(prefix + 'motorStepsVal', numCams);
+    setText(prefix + 'motorStepSizeVal', (totalTravel / numCams).toFixed(1));
+    setText(prefix + 'motorTotalTravelVal', totalTravel.toFixed(1));
 
     // Rebuild the 3D model
-    if (isModel2 && window.g3dInitialized) {
+    if (window.g3dInitialized && typeof rebuildGantryMechanicals === 'function') {
         rebuildGantryMechanicals();
     }
 }
@@ -210,14 +242,18 @@ function rebuildGantryMechanicals() {
     }
     window.g3dColumns = [];
 
-    const patHeight = parseFloat(document.getElementById('m2-patientEnvH')?.value || 2.0);
-    const wd = parseFloat(document.getElementById('m2-wdBox')?.value || 500) / 1000;
-    const numColumns = parseInt(document.getElementById('m2-numColumns')?.value || 2);
-    const vertCams = parseInt(document.getElementById('m2-g3dColCamsSlider')?.value || 5);
-    const envW = parseFloat(document.getElementById('m2-patientEnvW')?.value || 1.0);
-    const envD = parseFloat(document.getElementById('m2-patientEnvD')?.value || 0.6);
+    
+  const isModel2 = document.getElementById('model2-tab') && document.getElementById('model2-tab').classList.contains('active');
+  const prefix = isModel2 ? 'm2-' : '';
 
-    // Envelope Box
+  const patHeight = parseFloat(document.getElementById(prefix + 'patientEnvH')?.value || 2.0);
+  const wd = parseFloat(document.getElementById(prefix + 'wdBox')?.value || 500) / 1000;
+  const numColumns = isModel2 ? parseInt(document.getElementById('m2-numColumns')?.value || 2) : 1;
+  const vertCams = parseInt(document.getElementById(prefix + 'g3dColCamsSlider')?.value || 5);
+  const envW = parseFloat(document.getElementById(prefix + 'patientEnvW')?.value || 1.0);
+  const envD = parseFloat(document.getElementById(prefix + 'patientEnvD')?.value || 0.6);
+
+  // Envelope Box
     const boxGeo = new THREE.BoxGeometry(envW, patHeight, envD);
     const boxEdges = new THREE.EdgesGeometry(boxGeo);
     const boxMat = new THREE.LineBasicMaterial({ color: 0x8899aa, transparent: true, opacity: 0.3 });
