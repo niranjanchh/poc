@@ -193,6 +193,235 @@ function calculate() {
     }
 }
 
+
+function renderTopDownDensityMap(prefix, actualPxMm) {
+    const canvas = document.getElementById(prefix + 'density-map');
+    if (!canvas || !canvas.getContext) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    
+    const envW_m = parseFloat(document.getElementById(prefix + 'patientEnvW')?.value || 1.0);
+    const envD_m = parseFloat(document.getElementById(prefix + 'patientEnvD')?.value || 0.6);
+    const targetPxMm = parseFloat(document.getElementById(prefix + 'targetPxMm')?.value || 30);
+    const wd_mm = parseFloat(document.getElementById(prefix + 'wdBox')?.value || 480);
+    
+    const w_mm = envW_m * 1000;
+    const d_mm = envD_m * 1000;
+    
+    const gantryRadiusX = wd_mm + (w_mm / 2);
+    const gantryRadiusY = wd_mm + (d_mm / 2);
+    
+    const paramsDiv = document.getElementById(prefix + 'map-params');
+    if (paramsDiv) {
+      paramsDiv.textContent = 'Track: ' + Math.round(gantryRadiusX) + 'x' + Math.round(gantryRadiusY) + 'mm';
+    }
+    
+    const scale = Math.min((W - 30) / (gantryRadiusX * 2), (H - 30) / (gantryRadiusY * 2));
+    
+    ctx.save();
+    ctx.translate(W/2, H/2);
+    
+    // Draw center crosshair and axes
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, -H/2); ctx.lineTo(0, H/2);
+    ctx.moveTo(-W/2, 0); ctx.lineTo(W/2, 0);
+    ctx.stroke();
+    
+    // Add scale labels
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('0', 5, 5);
+    ctx.fillText(Math.round(w_mm/2) + 'mm', (w_mm/2 * scale) - 35, 5);
+    ctx.fillText('-' + Math.round(w_mm/2) + 'mm', -(w_mm/2 * scale) + 5, 5);
+    ctx.fillText(Math.round(d_mm/2) + 'mm', 5, (d_mm/2 * scale) - 15);
+    ctx.fillText('-' + Math.round(d_mm/2) + 'mm', 5, -(d_mm/2 * scale) + 5);
+    ctx.textBaseline = 'alphabetic'; // reset
+    
+    // Draw Gantry Orbit ellipse
+    ctx.beginPath();
+    ctx.ellipse(0, 0, gantryRadiusX * scale, gantryRadiusY * scale, 0, 0, 2 * Math.PI);
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    
+    // Camera positions
+    const isModel2 = (prefix === 'm2-');
+    const camAngles = isModel2 
+        ? [0, Math.PI/2, Math.PI, Math.PI*1.5] 
+        : [0, Math.PI/4, Math.PI/2, Math.PI*3/4, Math.PI, Math.PI*5/4, Math.PI*1.5, Math.PI*7/4];
+        
+    ctx.fillStyle = '#64748b';
+    camAngles.forEach(a => {
+      const cx = gantryRadiusX * Math.sin(a) * scale;
+      const cy = -gantryRadiusY * Math.cos(a) * scale;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4, 0, 2 * Math.PI);
+      ctx.fill();
+    });
+    
+    // Draw Rectangular Envelope colored by cumulative density
+    const rectHalfW = w_mm / 2;
+    const rectHalfD = d_mm / 2;
+    const edges = [
+      { x1: -rectHalfW, y1: -rectHalfD, x2: rectHalfW, y2: -rectHalfD, nx: 0, ny: -1 }, // Top
+      { x1: rectHalfW, y1: -rectHalfD, x2: rectHalfW, y2: rectHalfD, nx: 1, ny: 0 },    // Right
+      { x1: rectHalfW, y1: rectHalfD, x2: -rectHalfW, y2: rectHalfD, nx: 0, ny: 1 },    // Bottom
+      { x1: -rectHalfW, y1: rectHalfD, x2: -rectHalfW, y2: -rectHalfD, nx: -1, ny: 0 }  // Left
+    ];
+    
+    edges.forEach(edge => {
+      const steps = 100;
+      for (let i = 0; i < steps; i++) {
+        const t1 = i / steps;
+        const t2 = (i + 1) / steps;
+        
+        const px1 = edge.x1 + (edge.x2 - edge.x1) * t1;
+        const py1 = edge.y1 + (edge.y2 - edge.y1) * t1;
+        
+        const px2 = edge.x1 + (edge.x2 - edge.x1) * t2;
+        const py2 = edge.y1 + (edge.y2 - edge.y1) * t2;
+        
+        let maxDensity = 0;
+        for (let a of camAngles) {
+          const cx = gantryRadiusX * Math.sin(a);
+          const cy = -gantryRadiusY * Math.cos(a);
+          
+          const dx = cx - px1;
+          const dy = cy - py1;
+          const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+          
+          const dot = (dx / dist) * edge.nx + (dy / dist) * edge.ny;
+          if (dot > 0.01) {
+            const incidentAngle = Math.acos(Math.min(1, dot));
+            const density = (actualPxMm || targetPxMm) * (wd_mm / dist) * Math.cos(incidentAngle);
+            if (density > maxDensity) maxDensity = density;
+          }
+        }
+        
+        let color = '#ef4444';
+        if (maxDensity >= targetPxMm + 10) color = '#3b82f6';
+        else if (maxDensity >= targetPxMm) color = '#22c55e';
+        else if (maxDensity >= targetPxMm - 5) color = '#f59e0b';
+        
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(px1 * scale, py1 * scale);
+        ctx.lineTo(px2 * scale, py2 * scale);
+        ctx.stroke();
+      }
+    });
+    
+    ctx.restore();
+}
+
+function render1DDensityGraph(prefix, actualPxMm) {
+    const canvas = document.getElementById(prefix + 'density-graph-container');
+    if (!canvas || !canvas.getContext) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+
+    const envW_m = parseFloat(document.getElementById(prefix + 'patientEnvW')?.value || 1.0);
+    const envD_m = parseFloat(document.getElementById(prefix + 'patientEnvD')?.value || 0.6);
+    const targetPxMm = parseFloat(document.getElementById(prefix + 'targetPxMm')?.value || 30);
+    const wd_mm = parseFloat(document.getElementById(prefix + 'wdBox')?.value || 480);
+
+    const w_mm = envW_m * 1000;
+    const d_mm = envD_m * 1000;
+
+    const angleSelect = document.getElementById(prefix + 'graph-angle') || document.getElementById('graph-angle');
+    const angleDeg = parseInt(angleSelect ? angleSelect.value : '0');
+    const isFrontBack = (angleDeg === 0 || angleDeg === 180);
+
+    const depthSpanMm = isFrontBack ? d_mm : w_mm;
+
+    // Draw background grid
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(0, 0, W, H);
+
+    const PADDING_LEFT = 40;
+    const PADDING_BOTTOM = 30;
+    const PADDING_TOP = 20;
+    const PADDING_RIGHT = 20;
+    const graphW = W - PADDING_LEFT - PADDING_RIGHT;
+    const graphH = H - PADDING_BOTTOM - PADDING_TOP;
+
+    // Draw grid lines
+    const gridLines = 5;
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.lineWidth = 1;
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+
+    const maxDensity = Math.max((actualPxMm || targetPxMm) * 1.5, targetPxMm * 1.5, 45);
+
+    // Y axis labels & grid lines
+    for (let g = 0; g <= gridLines; g++) {
+        const val = (g / gridLines) * maxDensity;
+        const yPos = PADDING_TOP + graphH - (g / gridLines) * graphH;
+        ctx.beginPath();
+        ctx.moveTo(PADDING_LEFT, yPos);
+        ctx.lineTo(PADDING_LEFT + graphW, yPos);
+        ctx.stroke();
+        ctx.fillText(Math.round(val) + '', PADDING_LEFT - 5, yPos);
+    }
+
+    // X axis labels
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('0 mm', PADDING_LEFT, PADDING_TOP + graphH + 5);
+    ctx.fillText(Math.round(depthSpanMm / 2) + ' mm', PADDING_LEFT + graphW / 2, PADDING_TOP + graphH + 5);
+    ctx.fillText(Math.round(depthSpanMm) + ' mm', PADDING_LEFT + graphW, PADDING_TOP + graphH + 5);
+
+    // Draw target line
+    const targetY = PADDING_TOP + graphH - (targetPxMm / maxDensity) * graphH;
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(PADDING_LEFT, targetY);
+    ctx.lineTo(PADDING_LEFT + graphW, targetY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#22c55e';
+    ctx.textAlign = 'left';
+    ctx.fillText('Target (' + targetPxMm + ' px/mm)', PADDING_LEFT + 5, targetY - 12);
+
+    // Plot falloff curve
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    const samples = 100;
+    for (let i = 0; i < samples; i++) {
+        const depthIntoEnvelope = (i / (samples - 1)) * depthSpanMm;
+        const actualDistance = wd_mm + depthIntoEnvelope;
+        const density = (actualPxMm || targetPxMm) * (wd_mm / actualDistance);
+        
+        const xPos = PADDING_LEFT + (i / (samples - 1)) * graphW;
+        const yPos = PADDING_TOP + graphH - (density / maxDensity) * graphH;
+        if (i === 0) {
+            ctx.moveTo(xPos, yPos);
+        } else {
+            ctx.lineTo(xPos, yPos);
+        }
+    }
+    ctx.stroke();
+}
+window.renderTopDownDensityMap = renderTopDownDensityMap;
+window.render1DDensityGraph = render1DDensityGraph;
+
 // 3. Three.js 3D Visualizer
 function setupGantry3D() {
     let g3dContainer = document.getElementById('canvas3d-three');
