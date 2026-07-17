@@ -395,22 +395,95 @@ function animate() {
 }
 
 // 4. Initialization
-document.addEventListener('DOMContentLoaded', () => {
-    switchTab('model2-tab'); // Start on Model 2 to verify
+
+function updateOverlapValue(val, prefix = '') {
+    const el = document.getElementById(prefix + 'overlapValText');
+    if (el) el.textContent = val + '%';
     
-    const sweepBtn = document.getElementById('trigger360Sweep');
-    if (sweepBtn) {
-        sweepBtn.addEventListener('click', () => {
-            window.g3dIsSweeping = true;
-            window.g3dSweepStart = Date.now();
-        });
+    // Sync the other tab's overlap slider and text
+    const otherPrefix = prefix === '' ? 'm2-' : '';
+    const otherSlider = document.getElementById(otherPrefix + 'overlapX');
+    const otherText = document.getElementById(otherPrefix + 'overlapValText');
+    
+    if (otherSlider && otherSlider.value !== val) {
+        otherSlider.value = val;
     }
+    if (otherText) {
+        otherText.textContent = val + '%';
+    }
+    
+    calculate();
+}
+window.updateOverlapValue = updateOverlapValue;
 
-    const inputs = document.querySelectorAll('input, select');
-    inputs.forEach(input => {
-        input.addEventListener('input', calculate);
-        input.addEventListener('change', calculate);
+document.addEventListener('DOMContentLoaded', () => {
+  const syncPairs = [
+    ['patientEnvW', 'm2-patientEnvW'],
+    ['patientEnvD', 'm2-patientEnvD'],
+    ['patientEnvH', 'm2-patientEnvH'],
+    ['maxFootprintW', 'm2-maxFootprintW'],
+    ['maxFootprintD', 'm2-maxFootprintD'],
+    ['maxHeight', 'm2-maxHeight'],
+    ['sw', 'm2-sw'],
+    ['sh', 'm2-sh'],
+    ['pixelSize', 'm2-pixelSize'],
+    ['pxw', 'm2-pxw'],
+    ['pxh', 'm2-pxh'],
+    ['wdSlider', 'm2-wdSlider', 'wdBox', 'm2-wdBox'],
+    ['flSlider', 'm2-flSlider', 'flBox', 'm2-flBox'],
+    ['apSlider', 'm2-apSlider', 'apBox', 'm2-apBox'],
+    ['reqResSlider', 'm2-reqResSlider', 'reqResBox', 'm2-reqResBox'],
+    ['cocSlider', 'm2-cocSlider', 'cocBox', 'm2-cocBox'],
+    ['overlapX', 'm2-overlapX']
+  ];
+
+  syncPairs.forEach(ids => {
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        ['input', 'change'].forEach(evt => {
+          el.addEventListener(evt, (e) => {
+            const val = e.target.value;
+            ids.forEach(targetId => {
+              const targetEl = document.getElementById(targetId);
+              if (targetEl && targetEl !== e.target && targetEl.value !== val) {
+                targetEl.value = val;
+              }
+            });
+            if (id === 'overlapX' || id === 'm2-overlapX') {
+                const prefix = id.startsWith('m2-') ? 'm2-' : '';
+                updateOverlapValue(val, prefix);
+            } else {
+                calculate();
+            }
+          });
+        });
+      }
     });
+  });
 
-    window.addEventListener('resize', resizeGantry3D);
+  const preset1 = document.getElementById('sensorPreset');
+  const preset2 = document.getElementById('m2-sensorPreset');
+  if (preset1 && preset2) {
+      preset1.addEventListener('change', (e) => { if (preset2.value !== e.target.value) { preset2.value = e.target.value; preset2.dispatchEvent(new Event('change')); } });
+      preset2.addEventListener('change', (e) => { if (preset1.value !== e.target.value) { preset1.value = e.target.value; preset1.dispatchEvent(new Event('change')); } });
+  }
+  
+  const cocPreset1 = document.getElementById('cocPreset');
+  const cocPreset2 = document.getElementById('m2-cocPreset');
+  if (cocPreset1 && cocPreset2) {
+      cocPreset1.addEventListener('change', (e) => { if (cocPreset2.value !== e.target.value) { cocPreset2.value = e.target.value; cocPreset2.dispatchEvent(new Event('change')); } });
+      cocPreset2.addEventListener('change', (e) => { if (cocPreset1.value !== e.target.value) { cocPreset1.value = e.target.value; cocPreset1.dispatchEvent(new Event('change')); } });
+  }
+  
+  switchTab('model2-tab');
+  const sweepBtn = document.getElementById('trigger360Sweep');
+  if (sweepBtn) {
+      sweepBtn.addEventListener('click', () => {
+          window.g3dIsSweeping = true;
+          window.g3dSweepStart = Date.now();
+      });
+  }
+  window.addEventListener('resize', resizeGantry3D);
 });
+
