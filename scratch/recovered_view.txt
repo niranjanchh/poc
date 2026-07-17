@@ -1,0 +1,29 @@
+Created At: 2026-07-16T08:50:03Z
+Completed At: 2026-07-16T08:50:03Z
+File Path: `file:///d:/projects/poc_rfq/geometry_optics_calculator.html`
+Total Lines: 4456
+Total Bytes: 196656
+Showing lines 3125 to 3145
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+3125: 
+3126:   // ============================================================
+3127:   // THREE.JS GANTRY 3D VISUALIZER WITH REAL HEAD SCAN GLTF
+3128:   // ============================================================
+3129:   var g3dScene, g3dCamera, g3dRenderer, g3dControls;
+3130:   var gantryGroup, mannequinGroup, headMesh, stationaryGroup;
+3131:   var g3dMixer = null;
+3132:   var g3dClock = new THREE.Clock();
+3133:   var nathanModel = null;
+3134:   var dirLight, fillLight;
+3135:   var g3dSkinMaterials = [];
+3136:   window.g3dIlluminationMode = 'cross';
+3137:   
+3138:   function setupGantry3D() {
+3139:     g3dContainer = document.getElementById('canvas3d-three');
+3140:     if (!g3dContainer || g3dInitialized) return;
+3141:     g3dInitialized = true;
+3142: 
+3143:     // Create floating HTML HUD overlay on top of WebGL canvas
+3144:     const hud = document.createElement('div');
+3145:     hud.id = 'g3d-hud-overlay';
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.
