@@ -194,6 +194,106 @@ function calculate() {
 }
 
 
+
+function handleSensorPresetChange(prefix) {
+    const presetEl = document.getElementById(prefix + 'sensorPreset');
+    if (!presetEl) return;
+    const preset = presetEl.value;
+    const swEl = document.getElementById(prefix + 'sw');
+    const shEl = document.getElementById(prefix + 'sh');
+    const pixelSizeEl = document.getElementById(prefix + 'pixelSize');
+    const pxwEl = document.getElementById(prefix + 'pxw');
+    const pxhEl = document.getElementById(prefix + 'pxh');
+    
+    if (preset === 'IMX342') {
+        if (swEl) swEl.value = 31.8;
+        if (shEl) shEl.value = 23.8;
+        if (pixelSizeEl) pixelSizeEl.value = 3.45;
+        if (pxwEl) pxwEl.value = 9576;
+        if (pxhEl) pxhEl.value = 6388;
+    } else if (preset === 'IMX455') {
+        if (swEl) swEl.value = 36.0;
+        if (shEl) shEl.value = 24.0;
+        if (pixelSizeEl) pixelSizeEl.value = 3.76;
+        if (pxwEl) pxwEl.value = 9568;
+        if (pxhEl) pxhEl.value = 6380;
+    } else if (preset === 'IMX411') {
+        if (swEl) swEl.value = 53.4;
+        if (shEl) shEl.value = 40.0;
+        if (pixelSizeEl) pixelSizeEl.value = 3.76;
+        if (pxwEl) pxwEl.value = 14192;
+        if (pxhEl) pxhEl.value = 10640;
+    } else if (preset === '64mp_mobile') {
+        if (swEl) swEl.value = 6.47;
+        if (shEl) shEl.value = 4.85;
+        if (pixelSizeEl) pixelSizeEl.value = 0.7;
+        if (pxwEl) pxwEl.value = 9248;
+        if (pxhEl) pxhEl.value = 6936;
+    } else if (preset === '100mp_ind') {
+        if (swEl) swEl.value = 25.5;
+        if (shEl) shEl.value = 19.1;
+        if (pixelSizeEl) pixelSizeEl.value = 2.2;
+        if (pxwEl) pxwEl.value = 11608;
+        if (pxhEl) pxhEl.value = 8708;
+    } else if (preset === 'IMX571') {
+        if (swEl) swEl.value = 23.5;
+        if (shEl) shEl.value = 15.7;
+        if (pixelSizeEl) pixelSizeEl.value = 3.76;
+        if (pxwEl) pxwEl.value = 6244;
+        if (pxhEl) pxhEl.value = 4168;
+    }
+}
+
+function handleCoCPresetChange(prefix) {
+    const presetEl = document.getElementById(prefix + 'cocPreset');
+    if (!presetEl) return;
+    const preset = presetEl.value;
+    const pixelSizeVal = parseFloat(document.getElementById(prefix + 'pixelSize')?.value) || 3.45;
+    const swVal = parseFloat(document.getElementById(prefix + 'sw')?.value) || 46.15;
+    const shVal = parseFloat(document.getElementById(prefix + 'sh')?.value) || 32.87;
+    const cocBox = document.getElementById(prefix + 'cocBox');
+    const cocSlider = document.getElementById(prefix + 'cocSlider');
+    if (!cocBox || !cocSlider) return;
+
+    if (preset === 'pixel') {
+        cocBox.value = pixelSizeVal.toFixed(2);
+        cocSlider.value = pixelSizeVal;
+    } else if (preset === 'sensor-fraction') {
+        const diagonal = Math.sqrt(swVal*swVal + shVal*shVal);
+        const fraction = (diagonal / 1500) * 1000; 
+        cocBox.value = fraction.toFixed(2);
+        cocSlider.value = fraction;
+    } else if (preset === 'traditional') {
+        cocBox.value = 25.0;
+        cocSlider.value = 25.0;
+    }
+}
+
+function syncSensorDimensions(from, to) {
+    ['sw', 'sh', 'pixelSize', 'pxw', 'pxh'].forEach(id => {
+        const elFrom = document.getElementById(from + id);
+        const elTo = document.getElementById(to + id);
+        if (elFrom && elTo) {
+            elTo.value = elFrom.value;
+        }
+    });
+}
+
+function syncCoC(from, to) {
+    ['cocBox', 'cocSlider'].forEach(id => {
+        const elFrom = document.getElementById(from + id);
+        const elTo = document.getElementById(to + id);
+        if (elFrom && elTo) {
+            elTo.value = elFrom.value;
+        }
+    });
+}
+
+window.handleSensorPresetChange = handleSensorPresetChange;
+window.handleCoCPresetChange = handleCoCPresetChange;
+window.syncSensorDimensions = syncSensorDimensions;
+window.syncCoC = syncCoC;
+
 function renderTopDownDensityMap(prefix, actualPxMm) {
     const canvas = document.getElementById(prefix + 'density-map');
     if (!canvas || !canvas.getContext) return;
@@ -666,6 +766,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ['overlapX', 'm2-overlapX']
   ];
 
+  // Sync inputs across tabs
   syncPairs.forEach(ids => {
     ids.forEach(id => {
       const el = document.getElementById(id);
@@ -691,20 +792,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  const preset1 = document.getElementById('sensorPreset');
-  const preset2 = document.getElementById('m2-sensorPreset');
-  if (preset1 && preset2) {
-      preset1.addEventListener('change', (e) => { if (preset2.value !== e.target.value) { preset2.value = e.target.value; preset2.dispatchEvent(new Event('change')); } });
-      preset2.addEventListener('change', (e) => { if (preset1.value !== e.target.value) { preset1.value = e.target.value; preset1.dispatchEvent(new Event('change')); } });
-  }
-  
-  const cocPreset1 = document.getElementById('cocPreset');
-  const cocPreset2 = document.getElementById('m2-cocPreset');
-  if (cocPreset1 && cocPreset2) {
-      cocPreset1.addEventListener('change', (e) => { if (cocPreset2.value !== e.target.value) { cocPreset2.value = e.target.value; cocPreset2.dispatchEvent(new Event('change')); } });
-      cocPreset2.addEventListener('change', (e) => { if (cocPreset1.value !== e.target.value) { cocPreset1.value = e.target.value; cocPreset1.dispatchEvent(new Event('change')); } });
-  }
-  
+  // General listeners for ALL inputs/selects to trigger calculations & handle preset updates dynamically
+  const inputs = document.querySelectorAll('input, select');
+  inputs.forEach(input => {
+      ['input', 'change'].forEach(evt => {
+          input.addEventListener(evt, () => {
+              const prefix = input.id.startsWith('m2-') ? 'm2-' : '';
+              const baseId = input.id.replace('m2-', '');
+              if (baseId === 'sensorPreset') {
+                  handleSensorPresetChange(prefix);
+                  syncSensorDimensions(prefix, prefix === '' ? 'm2-' : '');
+              }
+              if (baseId === 'cocPreset') {
+                  handleCoCPresetChange(prefix);
+                  syncCoC(prefix, prefix === '' ? 'm2-' : '');
+              }
+              calculate();
+          });
+      });
+  });
+
   switchTab('model2-tab');
   const sweepBtn = document.getElementById('trigger360Sweep');
   if (sweepBtn) {
