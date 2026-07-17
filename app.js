@@ -30,30 +30,108 @@ function switchTab(tabId) {
 }
 
 // 2. Calculations
+
 function calculate() {
     const isModel2 = document.getElementById('model2-tab') && document.getElementById('model2-tab').style.display !== 'none';
     const prefix = isModel2 ? 'm2-' : '';
 
     const wdBox = document.getElementById(prefix + 'wdBox');
     const flBox = document.getElementById(prefix + 'flBox');
+    const apBox = document.getElementById(prefix + 'apBox');
+    const cocBox = document.getElementById(prefix + 'cocBox');
     const swEl = document.getElementById(prefix + 'sw');
     const shEl = document.getElementById(prefix + 'sh');
+    const pxwEl = document.getElementById(prefix + 'pxw');
+    const pixelSizeEl = document.getElementById(prefix + 'pixelSize');
+    const reqResBox = document.getElementById(prefix + 'reqResBox');
+    const patientEnvHEl = document.getElementById(prefix + 'patientEnvH');
+    const camsSlider = document.getElementById(prefix + 'g3dColCamsSlider');
+    const overlapEl = document.getElementById(prefix + 'overlapY') || document.getElementById('overlapY');
 
     if (!wdBox || !flBox) return;
 
     const wd = parseFloat(wdBox.value) || 500;
     const fl = parseFloat(flBox.value) || 35;
+    const ap = parseFloat(apBox?.value) || 8;
+    const coc = parseFloat(cocBox?.value) || 0.025;
     const sensorW = parseFloat(swEl.value) || 46.15;
     const sensorH = parseFloat(shEl.value) || 32.87;
+    const pxw = parseFloat(pxwEl?.value) || 13392;
+    const reqRes = parseFloat(reqResBox?.value) || 30;
+    const patientEnvH = parseFloat(patientEnvHEl?.value) || 2.0;
+    const overlapY = parseFloat(overlapEl?.value) || 15;
+    const numCams = parseInt(camsSlider?.value) || 5;
 
-    const magnification = fl / (wd - fl);
-    const fovW = sensorW / (magnification || 0.001);
-    const fovH = sensorH / (magnification || 0.001);
+    // Magnification & FOV
+    const magnification = fl / Math.max(0.1, (wd - fl));
+    const fovW = sensorW / magnification;
+    const fovH = sensorH / magnification;
 
     const fovVal = document.getElementById(prefix + 'fov-val');
     const fovHVal = document.getElementById(prefix + 'fov-h-val');
-    if (fovVal) fovVal.textContent = fovW.toFixed(0);
-    if (fovHVal) fovHVal.textContent = fovH.toFixed(0);
+    const fovVal2 = document.getElementById(prefix + 'fovVal2');
+    const fovHVal2 = document.getElementById(prefix + 'fovHVal2');
+    if (fovVal) fovVal.textContent = fovW.toFixed(1);
+    if (fovHVal) fovHVal.textContent = fovH.toFixed(1);
+    if (fovVal2) fovVal2.textContent = fovW.toFixed(1);
+    if (fovHVal2) fovHVal2.textContent = fovH.toFixed(1);
+
+    // Resolution
+    const geoResVal = pxw / fovW;
+    const geoResEl = document.getElementById(prefix + 'geo-res');
+    const geoResStatus = document.getElementById(prefix + 'geo-res-status');
+    if (geoResEl) geoResEl.textContent = geoResVal.toFixed(1) + ' px/mm';
+    if (geoResStatus) {
+        if (geoResVal >= reqRes) {
+            geoResStatus.textContent = 'PASS';
+            geoResStatus.className = 'status-pass';
+        } else {
+            geoResStatus.textContent = 'FAIL';
+            geoResStatus.className = 'status-fail';
+        }
+    }
+
+    // Depth of Field
+    const hyperfocal = (fl * fl) / (ap * coc) + fl;
+    const dn = (wd * (hyperfocal - fl)) / (hyperfocal + wd - 2*fl);
+    const df = (wd * (hyperfocal - fl)) / (hyperfocal - wd);
+    let dof = df - dn;
+    if (df < 0 || isNaN(dof)) dof = 9999; // Infinity
+    const dofEl = document.getElementById(prefix + 'singleDOF');
+    if (dofEl) dofEl.textContent = dof > 1000 ? '> 1000 mm' : dof.toFixed(1) + ' mm';
+
+    // Diffraction Blur
+    const diffBlur = 1.342 * ap;
+    const diffEl = document.getElementById(prefix + 'diff-blur');
+    const diffStatus = document.getElementById(prefix + 'diff-status');
+    const pixelSizeUm = parseFloat(pixelSizeEl?.value) || 3.45;
+    if (diffEl) diffEl.textContent = diffBlur.toFixed(2) + ' μm';
+    if (diffStatus) {
+        if (diffBlur <= pixelSizeUm * 2) {
+            diffStatus.textContent = 'PASS';
+            diffStatus.className = 'status-pass';
+        } else {
+            diffStatus.textContent = 'WARNING';
+            diffStatus.className = 'status-warn';
+        }
+    }
+
+    // Vertical Cams & Motor Steps
+    const effFovH = fovH * (1 - overlapY/100);
+    const totalTravel = patientEnvH * 1000;
+    const minCams = Math.ceil(totalTravel / effFovH);
+    const vertCamsEl = document.getElementById(prefix + 'verticalCamsNeededVal');
+    if (vertCamsEl) vertCamsEl.textContent = minCams;
+
+    const stackSizeEl = document.getElementById(prefix + 'stackSize');
+    if (stackSizeEl) stackSizeEl.textContent = '3 images';
+
+    const motorStepsEl = document.getElementById(prefix + 'motorStepsVal');
+    const motorStepSizeEl = document.getElementById(prefix + 'motorStepSizeVal');
+    const motorTotalEl = document.getElementById(prefix + 'motorTotalTravelVal');
+    if (motorStepsEl) motorStepsEl.textContent = numCams;
+    if (motorStepSizeEl) motorStepSizeEl.textContent = (totalTravel / numCams).toFixed(1);
+    if (motorTotalEl) motorTotalEl.textContent = totalTravel.toFixed(1);
 
     // Rebuild the 3D model
     if (isModel2 && window.g3dInitialized) {
