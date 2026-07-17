@@ -337,16 +337,33 @@ function rebuildGantryMechanicals() {
             cam.position.set(0, camY, 0.05);
             
             // FOV Cone
-            const fovGeo = new THREE.ConeGeometry(wd * 0.4, wd, 4, 1, true);
+            
+            const isModel2 = document.getElementById('model2-tab') && document.getElementById('model2-tab').style.display === 'block';
+            const prefix = isModel2 ? 'm2-' : '';
+            const fovW = parseFloat(document.getElementById(prefix + 'fovVal')?.textContent) || (wd * 400);
+            const fovH = parseFloat(document.getElementById(prefix + 'fovHVal')?.textContent) || (wd * 300);
+            
+            const fw = (fovW / 1000) / 2;
+            const fh = (fovH / 1000) / 2;
+            
+            const pts = new Float32Array([
+                0, 0, 0,          // tip at camera
+                -fw, fh, -wd,     // top left
+                 fw, fh, -wd,     // top right
+                 fw, -fh, -wd,    // bottom right
+                -fw, -fh, -wd     // bottom left
+            ]);
+            const idx = [
+                0,1,2, 0,2,3, 0,3,4, 0,4,1, 1,2,3, 1,3,4
+            ];
+            const fovGeo = new THREE.BufferGeometry();
+            fovGeo.setAttribute('position', new THREE.BufferAttribute(pts, 3));
+            fovGeo.setIndex(idx);
+            
             const fovEdges = new THREE.EdgesGeometry(fovGeo);
             const fovMat = new THREE.LineBasicMaterial({ color: 0x3b82f6 });
             const fov = new THREE.LineSegments(fovEdges, fovMat);
-            fov.rotation.x = Math.PI / 2;
-            
-            // Align FOV with camera (which is rotated parallel to person)
-            fov.position.z = -wd / 2;
-            
-            cam.add(fov);
+cam.add(fov);
             colGroup.add(cam);
         }
         
