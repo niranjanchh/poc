@@ -21,6 +21,16 @@ var g3dScene, g3dCamera, g3dRenderer, g3dControls;
 var gantryGroup, mannequinGroup, stationaryGroup;
 
 // 1. Core Logic & Tabs
+
+function switchSubTab(evt, subTabId) {
+    document.querySelectorAll('.sub-tab-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.sub-tab-btn').forEach(el => el.classList.remove('active'));
+    const target = document.getElementById(subTabId);
+    if (target) target.style.display = 'block';
+    if (evt && evt.currentTarget) evt.currentTarget.classList.add('active');
+}
+window.switchSubTab = switchSubTab;
+
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -45,7 +55,7 @@ function switchTab(tabId) {
 
 
 function calculate() {
-    const isModel2 = document.getElementById('model2-tab') && document.getElementById('model2-tab').classList.contains('active');
+    const isModel2 = document.getElementById('model2-tab') && document.getElementById('model2-tab').style.display === 'block';
     const prefix = isModel2 ? 'm2-' : '';
 
     const wdBox = document.getElementById(prefix + 'wdBox') || document.getElementById('wdBox');
@@ -255,7 +265,7 @@ function rebuildGantryMechanicals() {
     window.g3dColumns = [];
 
     
-  const isModel2 = document.getElementById('model2-tab') && document.getElementById('model2-tab').classList.contains('active');
+  const isModel2 = document.getElementById('model2-tab') && document.getElementById('model2-tab').style.display === 'block';
   const prefix = isModel2 ? 'm2-' : '';
 
   const patHeight = parseFloat(document.getElementById(prefix + 'patientEnvH')?.value || 2.0);
