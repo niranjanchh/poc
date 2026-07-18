@@ -1,4 +1,95 @@
 // 3D Visualizer Globals (Defined at top to avoid Temporal Dead Zone errors)
+
+// ============================================================
+// Export RFQ Tab to PDF
+// ============================================================
+async function exportRFQtoPDF() {
+  const btn = document.getElementById('export-rfq-pdf-btn');
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Generating PDF...';
+  btn.disabled = true;
+
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const margin = 10;
+
+  const subTabIds = [
+    'sub-intro', 'sub-geo', 'sub-img', 'sub-rob',
+    'sub-ill', 'sub-cal', 'sub-time', 'sub-soft',
+    'sub-service', 'sub-reg', 'sub-commercial'
+  ];
+  const subTabNames = [
+    '1. Project Overview & Scope', '2. Spatial & Geometry', '3. Imaging & Optics',
+    '4. Positioning Subsystem', '5. Illumination Subsystem', '6. Calibration Suite',
+    '7. Sync & Throughput', '8. Software, API & Cyber', '9. Lifecycle & Service',
+    '10. Regulatory & Standards', '11. Deliverables & Commercial'
+  ];
+
+  // Add title page
+  pdf.setFillColor(15, 23, 42);
+  pdf.rect(0, 0, pageW, pageH, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(22);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Aurora DermaPod RFQ Analysis', pageW / 2, pageH / 2 - 12, { align: 'center' });
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(148, 163, 184);
+  pdf.text('Subsystem Constraints & Compliance Review', pageW / 2, pageH / 2 + 2, { align: 'center' });
+  pdf.text('Generated: ' + new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }), pageW / 2, pageH / 2 + 12, { align: 'center' });
+
+  for (let i = 0; i < subTabIds.length; i++) {
+    const id = subTabIds[i];
+    const el = document.getElementById(id);
+    if (!el) continue;
+
+    // Temporarily show the section
+    const prevDisplay = el.style.display;
+    const prevClass = el.className;
+    el.style.display = 'block';
+    el.classList.add('active');
+
+    await new Promise(r => setTimeout(r, 80));
+
+    const canvas = await html2canvas(el, {
+      scale: 1.8,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      logging: false
+    });
+
+    el.style.display = prevDisplay;
+    el.className = prevClass;
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const imgW = pageW - margin * 2;
+    const imgH = (canvas.height * imgW) / canvas.width;
+
+    pdf.addPage();
+
+    // Header bar
+    pdf.setFillColor(15, 23, 42);
+    pdf.rect(0, 0, pageW, 10, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('DermaPod RFQ  |  ' + subTabNames[i], margin, 6.5);
+    pdf.text('Page ' + (i + 2), pageW - margin, 6.5, { align: 'right' });
+
+    // Content
+    const availH = pageH - 10 - margin;
+    const finalH = Math.min(imgH, availH);
+    pdf.addImage(imgData, 'JPEG', margin, 11, imgW, finalH);
+  }
+
+  pdf.save('DermaPod_RFQ_Analysis.pdf');
+
+  btn.innerHTML = originalText;
+  btn.disabled = false;
+}
+
   let userYaw = -0.6; // mouse orbit yaw
   let userPitch = 0.5; // mouse orbit pitch
   let isDrag = false;
