@@ -1,8 +1,4 @@
-const fs = require('fs');
-let appJs = fs.readFileSync('d:/projects/poc_rfq/app.js', 'utf8');
-
-const replacement = `
-  // Cross-tab input mirroring logic
+// Cross-tab input mirroring logic
   const syncedInputIds = [
     'patientEnvW', 'patientEnvD', 'patientEnvH',
     'maxFootprintW', 'maxFootprintD', 'maxHeight',
@@ -54,8 +50,3 @@ const replacement = `
       });
     }
   });
-`;
-
-appJs = appJs.replace(/\/\/ Cross-tab input mirroring logic[\s\S]*?(?=const m2_patientEnvH = document)/m, replacement);
-fs.writeFileSync('d:/projects/poc_rfq/app.js', appJs);
-console.log('Fixed syntax error!');

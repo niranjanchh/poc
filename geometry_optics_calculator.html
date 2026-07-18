@@ -27,9 +27,61 @@
 <script src="https://cdn.jsdelivr.net/npm/fflate@0.7.4/umd/index.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<link rel="stylesheet" href="style.css?v=1784198608038">
+<link rel="stylesheet" href="style.css?v=1784296000">
 </head>
 <body>
+
+<!-- Password Gate Overlay -->
+<div id="password-gate-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Segoe UI', sans-serif;">
+  <div style="background: #ffffff; padding: 36px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; width: 340px; box-sizing: border-box;">
+    <div style="font-size: 32px; margin-bottom: 8px;">🔒</div>
+    <h2 style="margin: 0 0 8px 0; color: #1e293b; font-size: 18px; font-weight: 700;">Secure Access Portal</h2>
+    <p style="margin: 0 0 20px 0; color: #64748b; font-size: 12px; line-height: 1.5;">This project contains confidential RFQ analysis and design materials. Please enter the access password.</p>
+    <input type="password" id="gate-password-input" placeholder="Enter Access Password" style="width: 100%; padding: 10px 12px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 12px; outline: none; box-sizing: border-box;" onkeydown="if(event.key === 'Enter') submitPasswordGate()">
+    <button onclick="submitPasswordGate()" style="width: 100%; padding: 10px; font-size: 13px; font-weight: bold; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s;">Authenticate</button>
+    <div id="gate-error-msg" style="color: #ef4444; font-size: 11px; font-weight: 600; margin-top: 10px; min-height: 15px;"></div>
+  </div>
+</div>
+
+<script>
+  // Simple PBKDF2/SHA-256 cryptographic check
+  async function hashPassword(passwd) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(passwd);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+  }
+
+  async function submitPasswordGate() {
+    const input = document.getElementById('gate-password-input');
+    const errorMsg = document.getElementById('gate-error-msg');
+    const pwd = input.value;
+    
+    // Hash of 'rfq@30'
+    const targetHash = "228fb60c3c634f9b5542a5b79cc1f179f6dd3a8c498ea3b664f8014de7f24e2d";
+    const hashed = await hashPassword(pwd);
+
+    if (hashed === targetHash) {
+      sessionStorage.setItem('derma_gate_authorized', 'true');
+      document.getElementById('password-gate-overlay').style.display = 'none';
+    } else {
+      errorMsg.textContent = "❌ Invalid Password. Access Denied.";
+      input.value = "";
+      input.focus();
+    }
+  }
+
+  // Auto-bypass if already authenticated in this browser session
+  if (sessionStorage.getItem('derma_gate_authorized') === 'true') {
+    document.write('<style>#password-gate-overlay { display: none !important; }</style>');
+    window.addEventListener('DOMContentLoaded', () => {
+      const gate = document.getElementById('password-gate-overlay');
+      if (gate) gate.remove();
+    });
+  }
+</script>
 
 <div class="container">
   <header>
@@ -45,6 +97,7 @@
       <button class="tab-btn active" id="btn-rfq" onclick="switchTab('rfq-tab')">RFQ Subsystem Constraints</button>
       <button class="tab-btn" id="btn-calc" onclick="switchTab('calculator-tab')">Single Column Gantry (Option A)</button>
       <button class="tab-btn" id="btn-model2" onclick="switchTab('model2-tab')">Dual Column Gantry (Model 2)</button>
+      <button class="tab-btn" id="btn-model3" onclick="switchTab('model3-tab')">Vertical Scanning Array (Model 3)</button>
     </div>
     <div style="display: flex; gap: 8px; margin-left: auto;">
       <button id="btn-reload-disk" class="tab-btn" style="background: #ef4444; color: white; border: none;" onclick="reloadFromDiskFile()">🔄 Reload from Disk File</button>
@@ -825,6 +878,7 @@
               <option value="imx542">Sony IMX542 (16.1MP, 3.45µm - 1.1" Industrial)</option>
               <option value="64mp_mobile">64 MP Embedded (1/2", 0.7µm)</option>
               <option value="100mp_ind">100 MP Industrial (APS-C, 2.2µm)</option>
+              <option value="imx927">Sony IMX927/IMX937 (105.5MP, 2.2µm - 2.5" format)</option>
               <option value="custom">Custom Configuration</option>
             </select>
           </div>
@@ -853,6 +907,49 @@
               <label>Height Pixels</label>
               <input type="number" id="pxh" step="1" value="9528" style="width: 100%;">
             </div>
+          </div>
+        </div>
+        
+        <div class="section">
+          <h2>💰 Camera Price &amp; Budget Config</h2>
+          <div class="control-group">
+            <label>Max Camera Budget ($)</label>
+            <input type="number" id="maxCameraBudget" value="50000" step="1000" style="width: 100%;">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
+            <div>
+              <label>50MP Price ($)</label>
+              <input type="number" id="price50" value="6500" step="100" style="width: 100%;">
+            </div>
+            <div>
+              <label>64MP Price ($)</label>
+              <input type="number" id="price64" value="6500" step="100" style="width: 100%;">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
+            <div>
+              <label>100MP Price ($)</label>
+              <input type="number" id="price100" value="8000" step="100" style="width: 100%;">
+            </div>
+            <div>
+              <label>127MP Price ($)</label>
+              <input type="number" id="price127" value="12000" step="100" style="width: 100%;">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
+            <div>
+              <label>150MP Price ($)</label>
+              <input type="number" id="price150" value="15000" step="100" style="width: 100%;">
+            </div>
+            <div>
+              <label>Custom / Other ($)</label>
+              <input type="number" id="priceCustom" value="6500" step="100" style="width: 100%;">
+            </div>
+          </div>
+          <div class="control-group">
+            <label>Active Camera Unit Price ($)</label>
+            <input type="number" id="cameraUnitPrice" value="12000" step="100" style="width: 100%; font-weight: bold; background: #f1f5f9; color: #475569;" readonly>
+            <span style="font-size: 10.5px; color: #94a3b8;">Automatically set based on chosen sensor.</span>
           </div>
         </div>
         
@@ -904,8 +1001,8 @@
           <div class="control-group">
             <label>Custom CoC Value (µm)</label>
             <div class="input-row">
-              <input type="range" id="cocSlider" min="0.1" max="1000" step="0.1" value="3.2">
-              <input type="number" id="cocBox" value="3.2" step="0.1">
+              <input type="range" id="cocSlider" min="0.1" max="1000" step="0.1" value="25.0">
+              <input type="number" id="cocBox" value="25.0" step="0.1">
             </div>
           </div>
         </div>
@@ -942,10 +1039,7 @@
   <input type="checkbox" id="g3d-extend-fov" onchange="if(typeof renderGantry3D === 'function') renderGantry3D()" />
   Extend FOV to Envelope
 </label>
-<button id="step-btn-three" class="visualizer-btn" style="padding: 8px 12px; font-size: 11px; font-weight: bold; border: none; height: auto; cursor: pointer; display: none; align-items: center; justify-content: center; gap: 4px; margin: 0; box-sizing: border-box; text-align: center; width: 100%; margin-top: 4px; background: #6366f1; color: white;">
-                  <span>🔄 Rotate One Step</span>
-                </button>
-                <div style="display: none !important; flex-direction: column; gap: 4px; font-size: 10.5px; font-weight: 700; padding: 6px; background: #f1f5f9; border-radius: 4px; border: 1px solid var(--border); text-align: left; box-sizing: border-box; width: 100%;">
+                <div style="display: flex; flex-direction: column; gap: 4px; font-size: 10.5px; font-weight: 700; padding: 6px; background: #f1f5f9; border-radius: 4px; border: 1px solid var(--border); text-align: left; box-sizing: border-box; width: 100%;">
                   <div style="display: flex; justify-content: space-between; gap: 4px;">
                     <span style="color: #475569;">Patient Envelope:</span>
                     <span id="hud-envelope-val" style="color: #1d4ed8;">100 × 100 × 200 cm</span>
@@ -966,40 +1060,85 @@
               </div>
             </div>
           </div>
+          
+
         </div>
         
-        <div class="section" style="display: none !important;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <h2 style="margin: 0;">Working Distance Optimization Matrix (80 - 100 cm)</h2>
-            <select id="matrix-sort" onchange="calculate()" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border); font-size: 13px; outline: none; cursor: pointer;">
-              <option value="wd">Sort by: WD</option>
-              <option value="fov">Sort by: FOV (Largest first)</option>
-              <option value="dof">Sort by: DoF (Deepest first)</option>
+        <!-- 1D Pixel Density Graph & 2D Top-Down Heatmap -->
+          <div class="section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h2 style="margin: 0; font-size: 15px; color: #1e293b; font-weight: 700;">📊 Coverage Heatmap & Density Profile</h2>
+            <select id="graph-angle" style="padding: 5px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 5px; background: white; cursor: pointer;" onchange="if(typeof render1DDensityGraph === 'function') render1DDensityGraph('')">
+              <option value="0">0° — Front (Width face)</option>
+              <option value="90">90° — Side (Depth face)</option>
+              <option value="180">180° — Back (Width face)</option>
+              <option value="270">270° — Side (Depth face)</option>
             </select>
           </div>
-          <div style="overflow-x: auto;">
-            <table class="data-table" id="matrix-table" style="width: 100%;">
-              <thead>
-                <tr>
-                  <th>WD (cm)</th>
-                  <th>Lens (mm)</th>
-                  <th>Actual Res</th>
-                  <th>Horiz. FOV</th>
-                  <th>DoF (mm)</th>
-                  <th>Clearance</th>
-                  <th>Gantry Diam.</th>
-                </tr>
-              </thead>
+          
+          <div style="display: flex; gap: 16px; width: 100%; align-items: stretch;">
+            <!-- Left Side: 2D Heatmap -->
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+              <div style="font-size: 11.5px; font-weight: 600; margin-bottom: 6px; color: #475569; display: flex; justify-content: space-between;">
+                <span>2D Envelope Coverage Heatmap (360°)</span>
+                <span id="map-params" style="font-weight: normal; color: #94a3b8; font-size: 10.5px;"></span>
+              </div>
+              <canvas id="density-map" width="380" height="280" style="width: 100%; height: 280px; border: 1px solid var(--border); border-radius: 6px; background: #f8fafc; display: block;"></canvas>
+              <div style="font-size: 10px; color: #94a3b8; margin-top: 6px; text-align: center;">
+                Elliptical outline colored by cumulative density of 360° sweep
+              </div>
+            </div>
+            
+            <!-- Right Side: 1D Graph -->
+            <div style="flex: 1.2; min-width: 0; display: flex; flex-direction: column;">
+              <div style="font-size: 11.5px; font-weight: 600; margin-bottom: 6px; color: #475569;">
+                1D Depth Falloff Profile
+              </div>
+              <canvas id="density-graph-container" width="460" height="280" style="width: 100%; height: 280px; border: 1px solid var(--border); border-radius: 6px; background: #f8fafc; display: block;"></canvas>
+              <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; margin-top: 6px; padding: 0 2px;">
+                <span id="graph-x-left">0 mm (Start)</span>
+                <span id="graph-x-label" style="font-weight: 600; color: #475569;">← Distance into Envelope (mm) →</span>
+                <span id="graph-x-right">End</span>
+              </div>
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 12px; margin-top: 12px; font-size: 11.5px; flex-wrap: wrap; border-top: 1px dashed #e2e8f0; padding-top: 10px;">
+            <span><span style="display:inline-block;width:12px;height:12px;background:#3b82f6;border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Excellent (&gt;Target+10)</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#22c55e;border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Good (≥Target)</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Marginal (&lt;Target)</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Poor (&lt;Target−5)</span>
+            <span id="graph-params" style="color:#64748b; margin-left:auto; font-weight:600;"></span>
+          </div>
+        </div>
+
+        <!-- Working Distance Matrix -->
+        <div class="section" style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <h2 style="margin: 0;">Dynamic Sensor Evaluation Matrix (2-4µm, Target: 30 px/mm)</h2>
+            </div>
+            <div style="overflow-x: auto;">
+              <table class="data-table" id="matrix-table" style="width: 100%; text-align: center;">
+                <thead>
+                  <tr>
+                    <th>Sensor</th>
+                    <th>Format</th>
+                    <th>Pixel Size</th>
+                    <th>Case</th>
+                    <th>Lens & WD</th>
+                    <th>Density</th>
+                    <th>Max FOV</th>
+                    <th>Vertical Cams</th>
+                    <th>Total Cost</th>
+                    <th>Budget Fit</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
               <tbody id="matrix-body">
                 <!-- Dynamically populated -->
               </tbody>
-            </table>
-          </div>
-          <div class="analysis-text" style="margin-top: 8px;">
-            💡 <i>This matrix recalculates standard lens options and clearances for each working distance to achieve compliance with the target pixel pitch.</i>
-          </div>
-          
-
+              </table>
+            </div>
         </div>
       </div>
       
@@ -1113,6 +1252,14 @@
                 <td>Total Travel Distance</td>
                 <td><span id="motorTotalTravelVal" style="font-weight:600;">--</span> mm</td>
               </tr>
+              <tr>
+                <td>Total Camera Cost</td>
+                <td>$<span id="totalCameraCost" style="font-weight:600;">--</span></td>
+              </tr>
+              <tr>
+                <td>Budget Status</td>
+                <td><span id="budgetStatus" class="badge">--</span></td>
+              </tr>
             </tbody>
           </table>
           <div class="explanation-box" id="motorExplanation" style="display: none;">--</div>
@@ -1166,9 +1313,9 @@
           <div class="control-group">
             <label style="display: flex; justify-content: space-between;">
               <span>Number of Columns</span>
-              <span id="m2-numColumnsText" style="font-weight: 700; color: var(--accent);">2 columns</span>
+              <span id="m2-numColumnsText" style="font-weight: 700; color: var(--accent);">3 columns</span>
             </label>
-            <input type="range" id="m2-numColumns" min="2" max="4" step="1" value="2" style="width: 100%; margin-top: 4px;">
+            <input type="range" id="m2-numColumns" min="2" max="4" step="1" value="3" style="width: 100%; margin-top: 4px;">
           </div>
           <div class="control-group" style="padding-top: 8px; border-top: 1px solid var(--border);">
             <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600;">
@@ -1190,6 +1337,7 @@
           <div class="control-group">
             <label>Sensor Preset</label>
             <select id="m2-sensorPreset" style="width:100%;">
+              <option value="IMX661">Sony IMX661 (127MP, 3.45µm - Large Format)</option>
               <option value="IMX342" selected>Sony IMX342 (47.5MP, 3.45µm)</option>
               <option value="IMX455">Sony IMX455 (61MP, 3.76µm)</option>
               <option value="IMX411">Sony IMX411 (150MP, 3.76µm)</option>
@@ -1224,6 +1372,49 @@
               <label>Height Pixels</label>
               <input type="number" id="m2-pxh" step="1" value="6388" style="width: 100%;">
             </div>
+          </div>
+        </div>
+        
+        <div class="section">
+          <h2>💰 Camera Price &amp; Budget Config</h2>
+          <div class="control-group">
+            <label>Max Camera Budget ($)</label>
+            <input type="number" id="m2-maxCameraBudget" value="50000" step="1000" style="width: 100%;">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
+            <div>
+              <label>50MP Price ($)</label>
+              <input type="number" id="m2-price50" value="6500" step="100" style="width: 100%;">
+            </div>
+            <div>
+              <label>64MP Price ($)</label>
+              <input type="number" id="m2-price64" value="6500" step="100" style="width: 100%;">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
+            <div>
+              <label>100MP Price ($)</label>
+              <input type="number" id="m2-price100" value="8000" step="100" style="width: 100%;">
+            </div>
+            <div>
+              <label>127MP Price ($)</label>
+              <input type="number" id="m2-price127" value="12000" step="100" style="width: 100%;">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
+            <div>
+              <label>150MP Price ($)</label>
+              <input type="number" id="m2-price150" value="15000" step="100" style="width: 100%;">
+            </div>
+            <div>
+              <label>Custom / Other ($)</label>
+              <input type="number" id="m2-priceCustom" value="6500" step="100" style="width: 100%;">
+            </div>
+          </div>
+          <div class="control-group">
+            <label>Active Camera Unit Price ($)</label>
+            <input type="number" id="m2-cameraUnitPrice" value="12000" step="100" style="width: 100%; font-weight: bold; background: #f1f5f9; color: #475569;" readonly>
+            <span style="font-size: 10.5px; color: #94a3b8;">Automatically set based on chosen sensor.</span>
           </div>
         </div>
 
@@ -1269,8 +1460,8 @@
           <div class="control-group">
             <label>Custom CoC Value (µm)</label>
             <div class="input-row">
-              <input type="range" id="m2-cocSlider" min="0.1" max="1000" step="0.1" value="3.2">
-              <input type="number" id="m2-cocBox" value="3.2" step="0.1">
+              <input type="range" id="m2-cocSlider" min="0.1" max="1000" step="0.1" value="25.0">
+              <input type="number" id="m2-cocBox" value="25.0" step="0.1">
             </div>
           </div>
         </div>
@@ -1307,6 +1498,8 @@
                     <th>Density</th>
                     <th>Max FOV</th>
                     <th>Vertical Cams<br>(per col)</th>
+                    <th>Total Cost</th>
+                    <th>Budget Fit</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -1319,53 +1512,7 @@
             💡 <i>This matrix recalculates standard lens options and clearances for each working distance to achieve compliance with the target pixel pitch.</i>
           </div>
 
-<!-- 1D Pixel Density Graph & 2D Top-Down Heatmap -->
-          <div class="section">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h2 style="margin: 0; font-size: 15px; color: #1e293b; font-weight: 700;">📊 Coverage Heatmap & Density Profile</h2>
-            <select id="graph-angle" style="padding: 5px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 5px; background: white; cursor: pointer;" onchange="if(typeof render1DDensityGraph === 'function') render1DDensityGraph('')">
-              <option value="0">0° — Front (Width face)</option>
-              <option value="90">90° — Side (Depth face)</option>
-              <option value="180">180° — Back (Width face)</option>
-              <option value="270">270° — Side (Depth face)</option>
-            </select>
-          </div>
-          
-          <div style="display: flex; gap: 16px; width: 100%; align-items: stretch;">
-            <!-- Left Side: 2D Heatmap -->
-            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
-              <div style="font-size: 11.5px; font-weight: 600; margin-bottom: 6px; color: #475569; display: flex; justify-content: space-between;">
-                <span>2D Envelope Coverage Heatmap (360°)</span>
-                <span id="map-params" style="font-weight: normal; color: #94a3b8; font-size: 10.5px;"></span>
-              </div>
-              <canvas id="density-map" width="380" height="280" style="width: 100%; height: 280px; border: 1px solid var(--border); border-radius: 6px; background: #f8fafc; display: block;"></canvas>
-              <div style="font-size: 10px; color: #94a3b8; margin-top: 6px; text-align: center;">
-                Elliptical outline colored by cumulative density of 360° sweep
-              </div>
-            </div>
-            
-            <!-- Right Side: 1D Graph -->
-            <div style="flex: 1.2; min-width: 0; display: flex; flex-direction: column;">
-              <div style="font-size: 11.5px; font-weight: 600; margin-bottom: 6px; color: #475569;">
-                1D Depth Falloff Profile
-              </div>
-              <canvas id="density-graph-container" width="460" height="280" style="width: 100%; height: 280px; border: 1px solid var(--border); border-radius: 6px; background: #f8fafc; display: block;"></canvas>
-              <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; margin-top: 6px; padding: 0 2px;">
-                <span id="graph-x-left">0 mm (Start)</span>
-                <span id="graph-x-label" style="font-weight: 600; color: #475569;">← Distance into Envelope (mm) →</span>
-                <span id="graph-x-right">End</span>
-              </div>
-            </div>
-          </div>
-          
-          <div style="display: flex; gap: 12px; margin-top: 12px; font-size: 11.5px; flex-wrap: wrap; border-top: 1px dashed #e2e8f0; padding-top: 10px;">
-            <span><span style="display:inline-block;width:12px;height:12px;background:#3b82f6;border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Excellent (&gt;Target+10)</span>
-            <span><span style="display:inline-block;width:12px;height:12px;background:#22c55e;border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Good (≥Target)</span>
-            <span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Marginal (&lt;Target)</span>
-            <span><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Poor (&lt;Target−5)</span>
-            <span id="graph-params" style="color:#64748b; margin-left:auto; font-weight:600;"></span>
-          </div>
-        </div>
+
         </div>
 
         <!-- 1D Pixel Density Graph & 2D Top-Down Heatmap -->
@@ -1503,9 +1650,425 @@
               <tr><td>Motor Steps</td><td><span id="m2-motorStepsVal">--</span></td></tr>
               <tr><td>Step Size</td><td><span id="m2-motorStepSizeVal">--</span> mm</td></tr>
               <tr><td>Total Travel</td><td><span id="m2-motorTotalTravelVal" style="font-weight:600;">--</span> mm</td></tr>
+              <tr><td>Discrete Sweep Positions</td><td>4 stops</td></tr>
+              <tr><td>Total Captured Images</td><td><span id="m2-totalCapturedImages" style="font-weight:600;">--</span></td></tr>
+              <tr><td>Total Session Time (4 Stops)</td><td><span id="m2-totalSessionTime" style="font-weight:600; color:var(--accent);">--</span> s</td></tr>
+              <tr><td>Total Camera Cost</td><td>$<span id="m2-totalCameraCost" style="font-weight:600;">--</span></td></tr>
+              <tr><td>Budget Status</td><td><span id="m2-budgetStatus" class="badge">--</span></td></tr>
             </tbody>
           </table>
           <div class="explanation-box" id="m2-motorExplanation" style="display: none;">--</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<div id="model3-tab" class="tab-content">
+    <!-- Visual Layout Wrapper: 3 Columns -->
+    <div class="layout">
+      
+      <!-- ===== LEFT PANEL: Parameters ===== -->
+      <div class="panel">
+        <div class="section">
+          <h2>Spatial Settings</h2>
+          <div class="control-group">
+            <label>Patient Env. Width (m)</label>
+            <input type="number" id="m3-patientEnvW" step="0.1" value="1.0" style="width: 100%;">
+          </div>
+          <div class="control-group">
+            <label>Patient Env. Depth (m)</label>
+            <input type="number" id="m3-patientEnvD" step="0.1" value="0.6" style="width: 100%;">
+          </div>
+          <div class="control-group">
+            <label>Patient Env. Height (m)</label>
+            <input type="number" id="m3-patientEnvH" step="0.1" value="2.0" style="width: 100%;">
+          </div>
+          <!-- Hidden inputs kept to preserve JS dependencies -->
+          <input type="hidden" id="m3-maxFootprintW" value="2.5">
+          <input type="hidden" id="m3-maxFootprintD" value="2.5">
+          <input type="hidden" id="m3-maxHeight" value="2.6">
+        </div>
+
+        <div class="section">
+          <h2>Gantry & Scan Settings</h2>
+          <div class="control-group">
+            <label style="display: flex; justify-content: space-between;">
+              <span>🎥 Cameras Stacked Vertically (on Carriage)</span>
+              <span style="font-weight: 700; color: var(--accent);"><span id="m3-col-cams-val-three">2</span> cams</span>
+            </label>
+            <input type="range" id="m3-g3dColCamsSlider" min="1" max="5" step="1" value="2" style="width: 100%; margin-top: 4px;">
+            <!-- Hidden input to preserve code compatibility -->
+            <input type="hidden" id="m3-numRows" value="5">
+          </div>
+          <div class="control-group">
+            <label style="display: flex; justify-content: space-between;">
+              <span>🎥 Horizontal Cameras (Auto Fit)</span>
+              <span id="m3-numColumnsText" style="font-weight: 700; color: var(--accent);">3 cameras</span>
+            </label>
+            <input type="hidden" id="m3-numColumns" value="3">
+          </div>
+          <div class="control-group" style="padding-top: 8px; border-top: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600;">
+              <span>Total Array FOV (W &times; H)</span>
+              <span id="m3-totalFovText" style="color: var(--accent);">-- mm &times; -- mm</span>
+            </div>
+          </div>
+          <div class="control-group">
+            <label style="display: flex; justify-content: space-between;">
+              <span>Overlap (%)</span>
+              <span id="m3-overlapValText" style="font-weight: 700; color: var(--accent);">15%</span>
+            </label>
+            <input type="range" id="m3-overlapX" min="0" max="90" step="5" value="15" style="width: 100%; margin-top: 4px;" oninput="updateOverlapValue(this.value, 'm3-')">
+          </div>
+        </div>
+        
+        <div class="section">
+          <h2>Sensor Details</h2>
+          <div class="control-group">
+            <label>Sensor Preset</label>
+            <select id="m3-sensorPreset" style="width:100%;">
+              <option value="IMX661">Sony IMX661 (127MP, 3.45µm - Large Format)</option>
+              <option value="IMX342" selected>Sony IMX342 (47.5MP, 3.45µm)</option>
+              <option value="IMX455">Sony IMX455 (61MP, 3.76µm)</option>
+              <option value="IMX411">Sony IMX411 (150MP, 3.76µm)</option>
+              <option value="IMX571">Sony IMX571 (26MP, 3.76µm)</option>
+              <option value="64mp_mobile">64 MP Embedded (1/2", 0.7µm)</option>
+              <option value="100mp_ind">100 MP Industrial (APS-C, 2.2µm)</option>
+              <option value="custom">Custom Configuration</option>
+            </select>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;" class="control-group">
+            <div>
+              <label>Width (mm)</label>
+              <input type="number" id="m3-sw" step="0.1" value="31.8" style="width:100%;">
+            </div>
+            <div>
+              <label>Height (mm)</label>
+              <input type="number" id="m3-sh" step="0.1" value="23.8" style="width:100%;">
+            </div>
+            <div>
+              <label>Pixel (µm)</label>
+              <input type="number" id="m3-pixelSize" step="0.05" value="3.45" style="width:100%;">
+            </div>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
+            <div>
+              <label>Width Pixels</label>
+              <input type="number" id="m3-pxw" step="1" value="9576" style="width: 100%;">
+            </div>
+            <div>
+              <label>Height Pixels</label>
+              <input type="number" id="m3-pxh" step="1" value="6388" style="width: 100%;">
+            </div>
+          </div>
+        </div>
+        
+        <div class="section">
+          <h2>💰 Camera Price &amp; Budget Config</h2>
+          <div class="control-group">
+            <label>Max Camera Budget ($)</label>
+            <input type="number" id="m3-maxCameraBudget" value="50000" step="1000" style="width: 100%;">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
+            <div>
+              <label>50MP Price ($)</label>
+              <input type="number" id="m3-price50" value="6500" step="100" style="width: 100%;">
+            </div>
+            <div>
+              <label>64MP Price ($)</label>
+              <input type="number" id="m3-price64" value="6500" step="100" style="width: 100%;">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
+            <div>
+              <label>100MP Price ($)</label>
+              <input type="number" id="m3-price100" value="8000" step="100" style="width: 100%;">
+            </div>
+            <div>
+              <label>127MP Price ($)</label>
+              <input type="number" id="m3-price127" value="12000" step="100" style="width: 100%;">
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
+            <div>
+              <label>150MP Price ($)</label>
+              <input type="number" id="m3-price150" value="15000" step="100" style="width: 100%;">
+            </div>
+            <div>
+              <label>Custom / Other ($)</label>
+              <input type="number" id="m3-priceCustom" value="6500" step="100" style="width: 100%;">
+            </div>
+          </div>
+          <div class="control-group">
+            <label>Active Camera Unit Price ($)</label>
+            <input type="number" id="m3-cameraUnitPrice" value="12000" step="100" style="width: 100%; font-weight: bold; background: #f1f5f9; color: #475569;" readonly>
+            <span style="font-size: 10.5px; color: #94a3b8;">Automatically set based on chosen sensor.</span>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Optics & Target</h2>
+          <div class="control-group">
+            <label>Focal Length (mm)</label>
+            <div class="input-row">
+              <input type="range" id="m3-flSlider" min="4" max="200" step="1" value="50">
+              <input type="number" id="m3-flBox" value="50">
+            </div>
+          </div>
+          <div class="control-group">
+            <label>Working Distance (mm)</label>
+            <div class="input-row">
+              <input type="range" id="m3-wdSlider" min="0" max="10000" value="480">
+              <input type="number" id="m3-wdBox" value="480">
+            </div>
+          </div>
+          <div class="control-group">
+            <label>Aperture (f-stop)</label>
+            <div class="input-row">
+              <input type="range" id="m3-apSlider" min="1.4" max="22" step="0.1" value="8.0">
+              <input type="number" id="m3-apBox" value="8.0" step="0.1">
+            </div>
+          </div>
+          <div class="control-group">
+            <label>Target Resolution (px/mm)</label>
+            <div class="input-row">
+              <input type="range" id="m3-reqResSlider" min="1" max="100" step="1" value="30">
+              <input type="number" id="m3-reqResBox" value="30">
+            </div>
+          </div>
+          <div class="control-group">
+            <label>Circle of Confusion Setting</label>
+            <select id="m3-cocPreset" style="width:100%;">
+              <option value="pixel" selected>Pixel-Perfect (CoC = Pixel Pitch)</option>
+              <option value="sensor-fraction">Sensor Size Fraction (d/1500)</option>
+              <option value="traditional">Traditional Flat Value (25 µm)</option>
+              <option value="custom">Custom Value Below</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>Custom CoC Value (µm)</label>
+            <div class="input-row">
+              <input type="range" id="m3-cocSlider" min="0.1" max="1000" step="0.1" value="25.0">
+              <input type="number" id="m3-cocBox" value="25.0" step="0.1">
+            </div>
+          </div>
+          <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border);">
+            <h3 style="font-size: 13px; font-weight: 700; margin-bottom: 8px; color: var(--text-dark);">5. Session Timing Parameters</h3>
+            <div class="control-group">
+              <label>Motor Step Settle Time (s)</label>
+              <input type="number" id="m3-settleTime" value="1.0" step="0.1" style="width: 100%;">
+            </div>
+            <div class="control-group">
+              <label>Focus Slice Capture Time (s)</label>
+              <input type="number" id="m3-sliceTime" value="0.25" step="0.05" style="width: 100%;">
+            </div>
+            <div class="control-group">
+              <label>Platform Rotation Time (s)</label>
+              <input type="number" id="m3-rotationTime" value="3.0" step="0.5" style="width: 100%;">
+            </div>
+            <div class="control-group" style="margin-top: 10px;">
+              <label style="display: flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; font-size: 11.5px; color: var(--text-dark);">
+                <input type="checkbox" id="m3-rotateGantryInstead" onchange="calculate()">
+                <span>🔄 Rotate Gantry instead of Patient</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ===== MIDDLE PANEL: 3D + Matrix + Graph ===== -->
+      <div class="panel" style="gap: 16px; min-width: 0;">
+        <!-- 3D Visualizer -->
+        <div class="preview-panel" style="padding: 16px; min-height: auto; align-items: stretch;">
+          <h2 id="m3-g3d-title" style="text-align: left; width: 100%;">3D Interactive Gantry Simulator (Model 3: Vertical Translating Array)</h2>
+          <div id="g3d-visualizer-placeholder-tab4" style="width: 100%; height: 500px; margin-bottom: 12px; flex-shrink: 0;">
+            <!-- Shared g3d-visualizer-wrapper will be dynamically appended here when Tab 4 is active -->
+          </div>
+        </div>
+
+        <!-- Working Distance Matrix -->
+        <div class="section" style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <h2 style="margin: 0;">Dynamic Sensor Evaluation Matrix (2-4µm, Target: 30 px/mm)</h2>
+              <select id="m3-matrix-sort" onchange="calculate()" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border); font-size: 13px; outline: none; cursor: pointer; display: none;">
+                <option value="wd">Sort by: WD</option>
+              </select>
+            </div>
+            <div style="overflow-x: auto;">
+              <table class="data-table" id="m3-matrix-table" style="width: 100%; text-align: center;">
+                <thead>
+                  <tr>
+                    <th>Sensor</th>
+                    <th>Format</th>
+                    <th>Pixel Size</th>
+                    <th>Case</th>
+                    <th>Lens & WD</th>
+                    <th>Density</th>
+                    <th>Max FOV</th>
+                    <th>Vertical Cams<br>(per col)</th>
+                    <th>Total Cost</th>
+                    <th>Budget Fit</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+              <tbody id="m3-matrix-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+          <div class="analysis-text" style="margin-top: 8px;">
+            💡 <i>This matrix recalculates standard lens options and clearances for each working distance to achieve compliance with the target pixel pitch.</i>
+          </div>
+
+
+        </div>
+
+        <!-- 1D Pixel Density Graph & 2D Top-Down Heatmap -->
+          <div class="section">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h2 style="margin: 0; font-size: 15px; color: #1e293b; font-weight: 700;">📊 Coverage Heatmap & Density Profile</h2>
+            <select id="m3-graph-angle" style="padding: 5px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 5px; background: white; cursor: pointer;" onchange="if(typeof render1DDensityGraph === 'function') render1DDensityGraph('m3-')">
+              <option value="0">0° — Front (Width face)</option>
+              <option value="90">90° — Side (Depth face)</option>
+              <option value="180">180° — Back (Width face)</option>
+              <option value="270">270° — Side (Depth face)</option>
+            </select>
+          </div>
+          
+          <div style="display: flex; gap: 16px; width: 100%; align-items: stretch;">
+            <!-- Left Side: 2D Heatmap -->
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+              <div style="font-size: 11.5px; font-weight: 600; margin-bottom: 6px; color: #475569; display: flex; justify-content: space-between;">
+                <span>2D Envelope Coverage Heatmap (360°)</span>
+                <span id="m3-map-params" style="font-weight: normal; color: #94a3b8; font-size: 10.5px;"></span>
+              </div>
+              <canvas id="m3-density-map" width="380" height="280" style="width: 100%; height: 280px; border: 1px solid var(--border); border-radius: 6px; background: #f8fafc; display: block;"></canvas>
+              <div style="font-size: 10px; color: #94a3b8; margin-top: 6px; text-align: center;">
+                Elliptical outline colored by cumulative density of all 4 stop angles
+              </div>
+            </div>
+            
+            <!-- Right Side: 1D Graph -->
+            <div style="flex: 1.2; min-width: 0; display: flex; flex-direction: column;">
+              <div style="font-size: 11.5px; font-weight: 600; margin-bottom: 6px; color: #475569;">
+                1D Depth Falloff Profile
+              </div>
+              <canvas id="m3-density-graph-container" width="460" height="280" style="width: 100%; height: 280px; border: 1px solid var(--border); border-radius: 6px; background: #f8fafc; display: block;"></canvas>
+              <div style="display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; margin-top: 6px; padding: 0 2px;">
+                <span id="m3-graph-x-left">0 mm (Start)</span>
+                <span id="m3-graph-x-label" style="font-weight: 600; color: #475569;">← Distance into Envelope (mm) →</span>
+                <span id="m3-graph-x-right">End</span>
+              </div>
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 12px; margin-top: 12px; font-size: 11.5px; flex-wrap: wrap; border-top: 1px dashed #e2e8f0; padding-top: 10px;">
+            <span><span style="display:inline-block;width:12px;height:12px;background:#3b82f6;border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Excellent (&gt;Target+10)</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#22c55e;border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Good (≥Target)</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#f59e0b;border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Marginal (&lt;Target)</span>
+            <span><span style="display:inline-block;width:12px;height:12px;background:#ef4444;border-radius:3px;margin-right:4px;vertical-align:middle;"></span>Poor (&lt;Target−5)</span>
+            <span id="m3-graph-params" style="color:#64748b; margin-left:auto; font-weight:600;"></span>
+          </div>
+        </div>
+        
+        <!-- Circumference suggestion -->
+        <div style="display: none; margin-top: 12px; background: #f0fdf4; border-radius: 6px; padding: 10px; border: 1px dashed #bbf7d0; font-size: 11.5px; color: #14532d; line-height: 1.55;">
+          <h4 style="margin: 0 0 6px 0; font-size: 12px; color: #166534; font-weight: bold; display: flex; align-items: center; gap: 4px;">📈 360° Horizontal Circumference Suggestion</h4>
+          • Static Ring Array (Option B): <b id="m3-ring-suggest-val">--</b> cameras required.<br>
+          • Model 3 (Dual Column): <b>4</b> fixed stop positions (0°, 90°, 180°, 270°) covering all 4 quadrants.
+        </div>
+      </div>
+
+      <!-- ===== RIGHT PANEL: Calculated Results ===== -->
+      <div class="panel">
+        <div class="section">
+          <h2>2. Resolution &amp; Field of View</h2>
+          <table class="data-table">
+            <thead>
+              <tr><th>Metric</th><th>Value</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Density (H)</td>
+                <td><span id="m3-geoResH" style="font-weight:600;">--</span> px/mm</td>
+                <td rowspan="2"><span id="m3-geoResStatus" class="badge">--</span></td>
+              </tr>
+              <tr>
+                <td>Density (V)</td>
+                <td><span id="m3-geoResV" style="font-weight:600;">--</span> px/mm</td>
+              </tr>
+              <tr style="background:#f0fdf4;">
+                <td style="font-weight:600;">Total Array FOV</td>
+                <td colspan="2"><span id="m3-totalArrayFov" style="font-weight:600; color:var(--accent);">--</span></td>
+              </tr>
+              <tr style="background:#f0fdf4;">
+                <td style="font-weight:600;">Avg Envelope Density</td>
+                <td colspan="2"><span id="m3-avgEnvDensity" style="font-weight:600; color:var(--accent);">--</span> px/mm</td>
+              </tr>
+              <tr>
+                <td>Min Density</td>
+                <td><span id="m3-geoRes" style="font-weight:600;">--</span> px/mm</td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>Sensor FOV</td>
+                <td colspan="2"><span id="m3-fovVal">--</span> × <span id="m3-fovHVal">--</span> mm</td>
+              </tr>
+              <tr>
+                <td>Airy Disk</td>
+                <td><span id="m3-diffBlur">--</span> µm</td>
+                <td><span id="m3-diffStatus" class="badge">--</span></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="explanation-box" id="m3-resolutionExplanation">--</div>
+          <div class="analysis-text" id="m3-resolutionImpactText">--</div>
+        </div>
+
+        <div class="section">
+          <h2>3. Focus Dynamics &amp; Stacking</h2>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="metric-card">
+              <label>Near Focus Limit</label>
+              <div id="m3-nearLimit" class="metric-val">--</div>
+            </div>
+            <div class="metric-card">
+              <label>Far Focus Limit</label>
+              <div id="m3-farLimit" class="metric-val">--</div>
+            </div>
+          </div>
+          <div class="metric-card" style="margin-top: 8px;">
+            <label>Single-Shot DOF</label>
+            <div id="m3-singleDOF" class="metric-val">--</div>
+          </div>
+          <div class="metric-card">
+            <label>Focus Stack Size</label>
+            <div id="m3-stackSize" class="metric-val">--</div>
+          </div>
+          <div class="explanation-box" id="m3-dofExplanation">--</div>
+          <div class="analysis-text" id="m3-dofImpactText">--</div>
+        </div>
+
+        <div class="section">
+          <h2>4. Vertical Motion &amp; Coverage</h2>
+          <table class="data-table">
+            <tbody>
+              <tr><td>Each Camera FOV at WD</td><td><span id="m3-fovVal2">--</span> × <span id="m3-fovHVal2">--</span> mm</td></tr>
+              <tr><td>Cameras Per Column</td><td><span id="m3-verticalCamsNeededVal">--</span></td></tr>
+              <tr><td>Motor Steps</td><td><span id="m3-motorStepsVal">--</span></td></tr>
+              <tr><td>Step Size</td><td><span id="m3-motorStepSizeVal">--</span> mm</td></tr>
+              <tr><td>Total Travel</td><td><span id="m3-motorTotalTravelVal" style="font-weight:600;">--</span> mm</td></tr>
+              <tr><td>Pose Rotations (0°, 90°, 180°, 270°)</td><td>4 poses</td></tr>
+              <tr><td>Total Captured Images</td><td><span id="m3-totalCapturedImages" style="font-weight:600;">--</span></td></tr>
+              <tr><td>Total Session Time (with Poses)</td><td><span id="m3-totalSessionTime" style="font-weight:600; color:var(--accent);">--</span> s</td></tr>
+              <tr><td>Total Camera Cost</td><td>$<span id="m3-totalCameraCost" style="font-weight:600;">--</span></td></tr>
+              <tr><td>Budget Status</td><td><span id="m3-budgetStatus" class="badge">--</span></td></tr>
+            </tbody>
+          </table>
+          <div class="explanation-box" id="m3-motorExplanation" style="display: none;">--</div>
         </div>
       </div>
     </div>
@@ -1517,6 +2080,6 @@
   
 </div>
 
-<script src="app.js?v=1784289337755"></script>
+<script src="app.js?v=1784296010"></script>
 </body>
 </html>
