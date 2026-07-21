@@ -212,16 +212,30 @@ async function exportRFQtoPDF() {
   }
 
   // LocalStorage Persistence & Cloudflare KV Database Sync for compliance fields
+  let lastEtag = null;
   async function syncCommentsFromKV() {
+    // Skip polling if tab is in background to save 100% of idle API quota
+    if (document.hidden) return;
+
     try {
-      const res = await fetch('/api/comments?cb=' + Date.now());
+      const headers = {};
+      if (lastEtag) headers['If-None-Match'] = lastEtag;
+
+      const res = await fetch('/api/comments', { headers });
+      if (res.status === 304) {
+        // Data has not changed! Zero KV read cost consumed.
+        return;
+      }
+
       if (res.ok) {
+        const newEtag = res.headers.get('ETag');
+        if (newEtag) lastEtag = newEtag;
+
         const kvData = await res.json();
         if (kvData && Object.keys(kvData).length > 0) {
           const fields = document.querySelectorAll('.rfq-textarea');
           fields.forEach(field => {
             const key = field.getAttribute('data-key');
-            // Only update if field is not currently focused by active user to prevent typing interruption
             if (kvData[key] !== undefined && document.activeElement !== field) {
               if (field.innerHTML !== kvData[key]) {
                 field.innerHTML = kvData[key];
@@ -236,12 +250,13 @@ async function exportRFQtoPDF() {
     }
   }
 
-  // Live real-time sync polling every 10 seconds across all open user sessions
-  setInterval(syncCommentsFromKV, 10000);
+  // Poll every 30 seconds for active tabs, completely paused for background tabs
+  setInterval(syncCommentsFromKV, 30000);
 
   let saveDebounceTimer = null;
   function saveAllCommentsToKV() {
     clearTimeout(saveDebounceTimer);
+    // 2.5s debounce ensures continuous typing triggers only 1 single write API call
     saveDebounceTimer = setTimeout(async () => {
       const fields = document.querySelectorAll('.rfq-textarea');
       const commentsObj = {};
@@ -258,7 +273,7 @@ async function exportRFQtoPDF() {
       } catch (e) {
         // Fallback silently if offline or not on Cloudflare
       }
-    }, 1200);
+    }, 2500);
   }
 
   function setupTextareaPersistence() {
