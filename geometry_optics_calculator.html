@@ -34,16 +34,28 @@
 <body>
 
 <!-- Password Gate Overlay -->
-<div id="password-gate-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0f172a; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: 'Segoe UI', sans-serif;">
-  <div style="background: #ffffff; padding: 36px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center; width: 340px; box-sizing: border-box;">
-    <div style="font-size: 32px; margin-bottom: 8px;">🔒</div>
-    <h2 style="margin: 0 0 8px 0; color: #1e293b; font-size: 18px; font-weight: 700;">Secure Access Portal</h2>
-    <p style="margin: 0 0 20px 0; color: #64748b; font-size: 12px; line-height: 1.5;">This project contains confidential RFQ analysis and design materials. Please enter the access password.</p>
-    <input type="password" id="gate-password-input" placeholder="Enter Access Password" style="width: 100%; padding: 10px 12px; font-size: 13px; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 12px; outline: none; box-sizing: border-box;" onkeydown="if(event.key === 'Enter') submitPasswordGate()">
-    <button onclick="submitPasswordGate()" style="width: 100%; padding: 10px; font-size: 13px; font-weight: bold; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; transition: background 0.2s;">Authenticate</button>
-    <div id="gate-error-msg" style="color: #ef4444; font-size: 11px; font-weight: 600; margin-top: 10px; min-height: 15px;"></div>
+<div id="password-gate-overlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%); z-index: 99999; display: flex; align-items: center; justify-content: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; box-sizing: border-box;">
+  <div style="background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.1); padding: 40px 36px; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); text-align: center; width: 100%; max-width: 380px; box-sizing: border-box;">
+    
+    <div style="width: 52px; height: 52px; background: rgba(59, 130, 246, 0.12); border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px; border: 1px solid rgba(59, 130, 246, 0.25);">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+    </div>
+
+    <h2 style="margin: 0 0 6px 0; color: #f8fafc; font-size: 20px; font-weight: 700; letter-spacing: -0.3px;">DermaPod© Portal Access</h2>
+    <p style="margin: 0 0 24px 0; color: #94a3b8; font-size: 13px; line-height: 1.5;">Restricted Subsystem Engineering Workspace. Please enter security passkey.</p>
+    
+    <div style="position: relative; margin-bottom: 16px;">
+      <input type="password" id="gate-password-input" placeholder="Security Passkey" style="width: 100%; padding: 12px 14px; font-size: 14px; background: rgba(15, 23, 42, 0.6); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 8px; outline: none; box-sizing: border-box; transition: border-color 0.2s, box-shadow 0.2s;" onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 3px rgba(59, 130, 246, 0.2)'" onblur="this.style.borderColor='rgba(255, 255, 255, 0.15)'; this.style.boxShadow='none'" onkeydown="if(event.key === 'Enter') submitPasswordGate()">
+    </div>
+
+    <button onclick="submitPasswordGate()" style="width: 100%; padding: 12px; font-size: 14px; font-weight: 600; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; cursor: pointer; transition: background 0.2s, transform 0.1s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'" onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
+      Sign In
+    </button>
+    
+    <div id="gate-error-msg" style="color: #f87171; font-size: 12px; font-weight: 500; margin-top: 14px; min-height: 18px;"></div>
   </div>
 </div>
+
 
 <script>
   // Simple PBKDF2/SHA-256 cryptographic check
