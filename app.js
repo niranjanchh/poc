@@ -52,47 +52,79 @@ async function exportRFQtoPDF() {
 
     await new Promise(r => setTimeout(r, 100));
 
-    const canvas = await html2canvas(el, {
-      scale: 2.0,
-      useCORS: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      windowWidth: 1400
-    });
+    // Render individual table rows to prevent text line clipping
+    const rows = Array.from(el.querySelectorAll('.rfq-table tbody tr, .rfq-section'));
+    let currentPage = pdf.addPage();
+    let currentY = 14;
+    const pageAvailH = pageH - 14 - margin;
+    let subPageNum = 1;
 
-    el.style.display = prevDisplay;
-    el.className = prevClass;
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
-    const imgW = pageW - margin * 2;
-    const imgH = (canvas.height * imgW) / canvas.width;
-    const availH = pageH - 14 - margin; // 14mm header/footer offset
-
-    let heightLeft = imgH;
-    let position = 0;
-    let pageNum = pdf.internal.getNumberOfPages() + 1;
-
-    // Slice image across multiple PDF pages if section is long
-    while (heightLeft > 0) {
-      pdf.addPage();
-
-      // Top Header Bar
+    // Add Section Header Bar
+    const addHeader = (pNum) => {
       pdf.setFillColor(15, 23, 42);
       pdf.rect(0, 0, pageW, 10, 'F');
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(8);
       pdf.setFont('helvetica', 'bold');
       pdf.text('DermaPod RFQ  |  ' + subTabNames[i], margin, 6.5);
-      pdf.text('Page ' + pageNum, pageW - margin, 6.5, { align: 'right' });
+      pdf.text('Page ' + pdf.internal.getNumberOfPages(), pageW - margin, 6.5, { align: 'right' });
+    };
 
-      // Add image slice maintaining correct proportions
-      const chunkH = Math.min(heightLeft, availH);
-      pdf.addImage(imgData, 'JPEG', margin, 12 - position, imgW, imgH, undefined, 'FAST');
+    addHeader(subPageNum);
 
-      heightLeft -= availH;
-      position += availH;
-      pageNum++;
+    if (rows.length > 0) {
+      // Capture header row first
+      const tableHeader = el.querySelector('.rfq-table thead');
+      let headerCanvas = null;
+      if (tableHeader) {
+        headerCanvas = await html2canvas(tableHeader, { scale: 1.8, backgroundColor: '#ffffff', logging: false, windowWidth: 1400 });
+      }
+
+      if (headerCanvas) {
+        const hImg = headerCanvas.toDataURL('image/jpeg', 0.95);
+        const hW = pageW - margin * 2;
+        const hH = (headerCanvas.height * hW) / headerCanvas.width;
+        pdf.addImage(hImg, 'JPEG', margin, currentY, hW, hH);
+        currentY += hH + 2;
+      }
+
+      for (let r = 0; r < rows.length; r++) {
+        const rowCanvas = await html2canvas(rows[r], { scale: 1.8, backgroundColor: '#ffffff', logging: false, windowWidth: 1400 });
+        const rImg = rowCanvas.toDataURL('image/jpeg', 0.95);
+        const rW = pageW - margin * 2;
+        const rH = (rowCanvas.height * rW) / rowCanvas.width;
+
+        // Check if row fits on current page
+        if (currentY + rH > pageH - margin) {
+          pdf.addPage();
+          subPageNum++;
+          addHeader(subPageNum);
+          currentY = 14;
+
+          // Re-render table header on new page for clarity
+          if (headerCanvas) {
+            const hImg = headerCanvas.toDataURL('image/jpeg', 0.95);
+            const hW = pageW - margin * 2;
+            const hH = (headerCanvas.height * hW) / headerCanvas.width;
+            pdf.addImage(hImg, 'JPEG', margin, currentY, hW, hH);
+            currentY += hH + 2;
+          }
+        }
+
+        pdf.addImage(rImg, 'JPEG', margin, currentY, rW, rH);
+        currentY += rH + 1;
+      }
+    } else {
+      // Fallback for overview text blocks
+      const canvas = await html2canvas(el, { scale: 1.8, backgroundColor: '#ffffff', logging: false, windowWidth: 1400 });
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const imgW = pageW - margin * 2;
+      const imgH = Math.min((canvas.height * imgW) / canvas.width, pageAvailH);
+      pdf.addImage(imgData, 'JPEG', margin, 14, imgW, imgH);
     }
+
+    el.style.display = prevDisplay;
+    el.className = prevClass;
   }
 
   pdf.save('DermaPod_RFQ_Analysis.pdf');
