@@ -449,14 +449,28 @@
     box-sizing: border-box;
     border: 1px solid var(--border);
     border-radius: 4px;
-    font-size: 11px;
+    font-size: 11.5px;
     font-family: inherit;
-    padding: 6px;
-    resize: none;
-    overflow-y: hidden;
+    padding: 8px 10px;
+    resize: vertical;
+    overflow-y: auto;
     background: #ffffff;
     color: var(--text-main);
     display: block;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.5;
+  }
+  .rfq-textarea strong, .rfq-textarea b {
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .rfq-textarea ul, .rfq-textarea ol {
+    margin: 4px 0 4px 18px;
+    padding: 0;
+  }
+  .rfq-textarea li {
+    margin-bottom: 2px;
   }
   
   .rfq-textarea:focus {
