@@ -211,7 +211,50 @@ async function exportRFQtoPDF() {
     }, 800);
   }
 
-  // LocalStorage Persistence & Contenteditable conversion for compliance fields
+  // LocalStorage Persistence & Cloudflare KV Database Sync for compliance fields
+  async function syncCommentsFromKV() {
+    try {
+      const res = await fetch('/api/comments');
+      if (res.ok) {
+        const kvData = await res.json();
+        if (kvData && Object.keys(kvData).length > 0) {
+          const fields = document.querySelectorAll('.rfq-textarea');
+          fields.forEach(field => {
+            const key = field.getAttribute('data-key');
+            if (kvData[key] !== undefined) {
+              field.innerHTML = kvData[key];
+              localStorage.setItem('derma_rfq_' + key, kvData[key]);
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.log('KV Sync Notice: Running local storage / fallback comments mode.');
+    }
+  }
+
+  let saveDebounceTimer = null;
+  function saveAllCommentsToKV() {
+    clearTimeout(saveDebounceTimer);
+    saveDebounceTimer = setTimeout(async () => {
+      const fields = document.querySelectorAll('.rfq-textarea');
+      const commentsObj = {};
+      fields.forEach(field => {
+        const key = field.getAttribute('data-key');
+        commentsObj[key] = field.innerHTML || '';
+      });
+      try {
+        await fetch('/api/comments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(commentsObj)
+        });
+      } catch (e) {
+        // Fallback silently if offline or not on Cloudflare
+      }
+    }, 1200);
+  }
+
   function setupTextareaPersistence() {
     const textareas = document.querySelectorAll('.rfq-textarea');
     
@@ -219,14 +262,12 @@ async function exportRFQtoPDF() {
       const key = textarea.getAttribute('data-key');
       const placeholder = textarea.getAttribute('placeholder') || 'Comments...';
       
-      // Create contenteditable div in place of textarea to allow selective text highlighting
       const div = document.createElement('div');
       div.className = 'rfq-textarea';
       div.setAttribute('data-key', key);
       div.setAttribute('data-placeholder', placeholder);
       div.contentEditable = 'true';
       
-      // Load saved value: Priority 1: localStorage, Priority 2: rfqSavedComments (file database)
       let savedVal = localStorage.getItem('derma_rfq_' + key);
       if (savedVal === null && typeof rfqSavedComments !== 'undefined' && rfqSavedComments && rfqSavedComments[key] !== undefined) {
         savedVal = rfqSavedComments[key];
@@ -236,15 +277,19 @@ async function exportRFQtoPDF() {
         div.innerHTML = savedVal;
       }
       
-      // Auto-save innerHTML on change
       div.addEventListener('input', () => {
         localStorage.setItem('derma_rfq_' + key, div.innerHTML);
         triggerAutoSave();
+        saveAllCommentsToKV();
       });
       
       textarea.parentNode.replaceChild(div, textarea);
     });
+
+    // Attempt live fetch from Cloudflare KV
+    syncCommentsFromKV();
   }
+
 
   // Export comments to rfq_comments.js helper function
   function exportComments() {
