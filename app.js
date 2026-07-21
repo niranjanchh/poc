@@ -49,9 +49,9 @@ async function exportRFQtoPDF() {
     el.classList.add('active');
     await new Promise(r => setTimeout(r, 120));
 
-    // Capture the full section as one tall canvas
+    // Capture the full section as one tall canvas at high resolution
     const fullCanvas = await html2canvas(el, {
-      scale: 2,
+      scale: 3,
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,
@@ -61,12 +61,14 @@ async function exportRFQtoPDF() {
     el.style.display = prevDisplay;
     el.className = prevClass;
 
-    // Calculate how many PDF pages this section needs
+    // Calculate page slicing parameters
+    const renderScale = 3;
     const imgW = pageW - margin * 2;
-    const scaleFactor = imgW / (fullCanvas.width / 2); // scale:2 means canvas is 2x
-    const pxPerMm = (fullCanvas.width / 2) / imgW;
-    const sliceHeightPx = Math.floor(contentH * pxPerMm * 2); // pixels per page slice (accounting for scale:2)
-    const totalSlices = Math.ceil(fullCanvas.height / sliceHeightPx);
+    const pxPerMm = (fullCanvas.width / renderScale) / imgW;
+    const sliceHeightPx = Math.floor(contentH * pxPerMm * renderScale);
+    const overlapPx = Math.floor(40 * renderScale); // 40px overlap prevents mid-line text cuts
+    const stepPx = sliceHeightPx - overlapPx;
+    const totalSlices = Math.ceil((fullCanvas.height - overlapPx) / stepPx);
 
     for (let s = 0; s < totalSlices; s++) {
       pdf.addPage();
@@ -81,7 +83,7 @@ async function exportRFQtoPDF() {
       pdf.text('Page ' + pdf.internal.getNumberOfPages(), pageW - margin, 6.5, { align: 'right' });
 
       // Slice the canvas for this page
-      const srcY = s * sliceHeightPx;
+      const srcY = s * stepPx;
       const srcH = Math.min(sliceHeightPx, fullCanvas.height - srcY);
 
       const sliceCanvas = document.createElement('canvas');
@@ -90,10 +92,10 @@ async function exportRFQtoPDF() {
       const ctx = sliceCanvas.getContext('2d');
       ctx.drawImage(fullCanvas, 0, srcY, fullCanvas.width, srcH, 0, 0, fullCanvas.width, srcH);
 
-      const sliceImg = sliceCanvas.toDataURL('image/jpeg', 0.92);
+      const sliceImg = sliceCanvas.toDataURL('image/png');
       const sliceH = (srcH * imgW) / fullCanvas.width;
 
-      pdf.addImage(sliceImg, 'JPEG', margin, contentTop, imgW, sliceH);
+      pdf.addImage(sliceImg, 'PNG', margin, contentTop, imgW, sliceH);
     }
   }
 
