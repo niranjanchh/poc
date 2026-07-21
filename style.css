@@ -707,3 +707,61 @@
 
   body:not(.model2-active) #step-btn-three { display: none !important; }
   body.model2-active #step-btn-three { display: flex !important; }
+
+  /* ============================================================
+     Mobile & Tablet Responsive Adjustments (Phones & Devices)
+     ============================================================ */
+  @media (max-width: 768px) {
+    body {
+      padding: 8px;
+    }
+    .container {
+      padding: 12px;
+      border-radius: 8px;
+    }
+    header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .tabs {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+    .tabs > div {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .tab-btn {
+      flex: 1 1 auto;
+      text-align: center;
+      padding: 8px 10px;
+      font-size: 11px;
+    }
+    .sub-tabs {
+      overflow-x: auto;
+      white-space: nowrap;
+      padding-bottom: 6px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .sub-tab-btn {
+      display: inline-block;
+      padding: 6px 12px;
+      font-size: 11px;
+    }
+    .rfq-table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .rfq-table {
+      min-width: 650px;
+    }
+    .layout {
+      grid-template-columns: 1fr !important;
+    }
+    .visualizer-container {
+      height: 320px !important;
+    }
+  }
