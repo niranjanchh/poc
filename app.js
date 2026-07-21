@@ -51,7 +51,7 @@ async function exportRFQtoPDF() {
 
     // Capture the full section as one tall canvas at high resolution
     const fullCanvas = await html2canvas(el, {
-      scale: 3,
+      scale: 2,
       useCORS: true,
       backgroundColor: '#ffffff',
       logging: false,
@@ -62,7 +62,7 @@ async function exportRFQtoPDF() {
     el.className = prevClass;
 
     // Calculate page slicing parameters
-    const renderScale = 3;
+    const renderScale = 2;
     const imgW = pageW - margin * 2;
     const pxPerMm = (fullCanvas.width / renderScale) / imgW;
     const sliceHeightPx = Math.floor(contentH * pxPerMm * renderScale);
@@ -92,10 +92,10 @@ async function exportRFQtoPDF() {
       const ctx = sliceCanvas.getContext('2d');
       ctx.drawImage(fullCanvas, 0, srcY, fullCanvas.width, srcH, 0, 0, fullCanvas.width, srcH);
 
-      const sliceImg = sliceCanvas.toDataURL('image/png');
+      const sliceImg = sliceCanvas.toDataURL('image/jpeg', 0.95);
       const sliceH = (srcH * imgW) / fullCanvas.width;
 
-      pdf.addImage(sliceImg, 'PNG', margin, contentTop, imgW, sliceH);
+      pdf.addImage(sliceImg, 'JPEG', margin, contentTop, imgW, sliceH);
     }
   }
 
