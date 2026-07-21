@@ -45,43 +45,54 @@ async function exportRFQtoPDF() {
     const el = document.getElementById(id);
     if (!el) continue;
 
-    // Temporarily show the section
     const prevDisplay = el.style.display;
     const prevClass = el.className;
     el.style.display = 'block';
     el.classList.add('active');
 
-    await new Promise(r => setTimeout(r, 80));
+    await new Promise(r => setTimeout(r, 100));
 
     const canvas = await html2canvas(el, {
-      scale: 1.8,
+      scale: 2.0,
       useCORS: true,
       backgroundColor: '#ffffff',
-      logging: false
+      logging: false,
+      windowWidth: 1400
     });
 
     el.style.display = prevDisplay;
     el.className = prevClass;
 
-    const imgData = canvas.toDataURL('image/jpeg', 0.92);
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
     const imgW = pageW - margin * 2;
     const imgH = (canvas.height * imgW) / canvas.width;
+    const availH = pageH - 14 - margin; // 14mm header/footer offset
 
-    pdf.addPage();
+    let heightLeft = imgH;
+    let position = 0;
+    let pageNum = pdf.internal.getNumberOfPages() + 1;
 
-    // Header bar
-    pdf.setFillColor(15, 23, 42);
-    pdf.rect(0, 0, pageW, 10, 'F');
-    pdf.setTextColor(255, 255, 255);
-    pdf.setFontSize(8);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('DermaPod RFQ  |  ' + subTabNames[i], margin, 6.5);
-    pdf.text('Page ' + (i + 2), pageW - margin, 6.5, { align: 'right' });
+    // Slice image across multiple PDF pages if section is long
+    while (heightLeft > 0) {
+      pdf.addPage();
 
-    // Content
-    const availH = pageH - 10 - margin;
-    const finalH = Math.min(imgH, availH);
-    pdf.addImage(imgData, 'JPEG', margin, 11, imgW, finalH);
+      // Top Header Bar
+      pdf.setFillColor(15, 23, 42);
+      pdf.rect(0, 0, pageW, 10, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('DermaPod RFQ  |  ' + subTabNames[i], margin, 6.5);
+      pdf.text('Page ' + pageNum, pageW - margin, 6.5, { align: 'right' });
+
+      // Add image slice maintaining correct proportions
+      const chunkH = Math.min(heightLeft, availH);
+      pdf.addImage(imgData, 'JPEG', margin, 12 - position, imgW, imgH, undefined, 'FAST');
+
+      heightLeft -= availH;
+      position += availH;
+      pageNum++;
+    }
   }
 
   pdf.save('DermaPod_RFQ_Analysis.pdf');
