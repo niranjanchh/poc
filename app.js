@@ -214,16 +214,19 @@ async function exportRFQtoPDF() {
   // LocalStorage Persistence & Cloudflare KV Database Sync for compliance fields
   async function syncCommentsFromKV() {
     try {
-      const res = await fetch('/api/comments');
+      const res = await fetch('/api/comments?cb=' + Date.now());
       if (res.ok) {
         const kvData = await res.json();
         if (kvData && Object.keys(kvData).length > 0) {
           const fields = document.querySelectorAll('.rfq-textarea');
           fields.forEach(field => {
             const key = field.getAttribute('data-key');
-            if (kvData[key] !== undefined) {
-              field.innerHTML = kvData[key];
-              localStorage.setItem('derma_rfq_' + key, kvData[key]);
+            // Only update if field is not currently focused by active user to prevent typing interruption
+            if (kvData[key] !== undefined && document.activeElement !== field) {
+              if (field.innerHTML !== kvData[key]) {
+                field.innerHTML = kvData[key];
+                localStorage.setItem('derma_rfq_' + key, kvData[key]);
+              }
             }
           });
         }
@@ -232,6 +235,9 @@ async function exportRFQtoPDF() {
       console.log('KV Sync Notice: Running local storage / fallback comments mode.');
     }
   }
+
+  // Live real-time sync polling every 10 seconds across all open user sessions
+  setInterval(syncCommentsFromKV, 10000);
 
   let saveDebounceTimer = null;
   function saveAllCommentsToKV() {
