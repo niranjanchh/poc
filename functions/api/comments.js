@@ -1,42 +1,40 @@
 export async function onRequestGet(context) {
   try {
+    if (!context.env || !context.env.COMMENTS_KV) {
+      return new Response(JSON.stringify({ _error: "KV_BINDING_MISSING" }), {
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      });
+    }
     const data = await context.env.COMMENTS_KV.get("rfq_comments_data");
-    const jsonStr = data || "{}";
-    
-    // Simple ETag hash calculation
-    let hash = 0;
-    for (let i = 0; i < jsonStr.length; i++) {
-      hash = ((hash << 5) - hash) + jsonStr.charCodeAt(i);
-      hash |= 0;
-    }
-    const etag = `"comments-${Math.abs(hash)}"`;
-
-    const clientEtag = context.request.headers.get("If-None-Match");
-    if (clientEtag === etag) {
-      return new Response(null, { status: 304, headers: { "ETag": etag, "Access-Control-Allow-Origin": "*" } });
-    }
-
-    return new Response(jsonStr, {
+    return new Response(data || "{}", {
       headers: {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
-        "ETag": etag,
-        "Cache-Control": "max-age=10, s-maxage=30"
+        "Cache-Control": "no-store, no-cache, must-revalidate"
       }
     });
   } catch (e) {
-    return new Response("{}", { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ _error: e.message }), { headers: { "Content-Type": "application/json" } });
   }
 }
 
 export async function onRequestPost(context) {
   try {
+    if (!context.env || !context.env.COMMENTS_KV) {
+      return new Response(JSON.stringify({ status: "error", message: "KV_BINDING_MISSING" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+      });
+    }
     const body = await context.request.text();
     await context.env.COMMENTS_KV.put("rfq_comments_data", body);
     return new Response(JSON.stringify({ status: "success" }), {
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
     });
   } catch (err) {
-    return new Response(JSON.stringify({ status: "error", message: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ status: "error", message: err.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
+    });
   }
 }

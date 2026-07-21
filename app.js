@@ -212,27 +212,12 @@ async function exportRFQtoPDF() {
   }
 
   // LocalStorage Persistence & Cloudflare KV Database Sync for compliance fields
-  let lastEtag = null;
   async function syncCommentsFromKV() {
-    // Skip polling if tab is in background to save 100% of idle API quota
-    if (document.hidden) return;
-
     try {
-      const headers = {};
-      if (lastEtag) headers['If-None-Match'] = lastEtag;
-
-      const res = await fetch('/api/comments', { headers });
-      if (res.status === 304) {
-        // Data has not changed! Zero KV read cost consumed.
-        return;
-      }
-
+      const res = await fetch('/api/comments?cb=' + Date.now(), { cache: 'no-store' });
       if (res.ok) {
-        const newEtag = res.headers.get('ETag');
-        if (newEtag) lastEtag = newEtag;
-
         const kvData = await res.json();
-        if (kvData && Object.keys(kvData).length > 0) {
+        if (kvData && Object.keys(kvData).length > 0 && !kvData._error) {
           const fields = document.querySelectorAll('.rfq-textarea');
           fields.forEach(field => {
             const key = field.getAttribute('data-key');
@@ -250,13 +235,13 @@ async function exportRFQtoPDF() {
     }
   }
 
-  // Poll every 30 seconds for active tabs, completely paused for background tabs
-  setInterval(syncCommentsFromKV, 30000);
+  // Poll every 5 seconds for fast live sync across all devices
+  setInterval(syncCommentsFromKV, 5000);
 
   let saveDebounceTimer = null;
   function saveAllCommentsToKV() {
     clearTimeout(saveDebounceTimer);
-    // 2.5s debounce ensures continuous typing triggers only 1 single write API call
+    // 800ms debounce ensures rapid save to Cloudflare KV
     saveDebounceTimer = setTimeout(async () => {
       const fields = document.querySelectorAll('.rfq-textarea');
       const commentsObj = {};
@@ -273,7 +258,7 @@ async function exportRFQtoPDF() {
       } catch (e) {
         // Fallback silently if offline or not on Cloudflare
       }
-    }, 2500);
+    }, 800);
   }
 
   function setupTextareaPersistence() {
