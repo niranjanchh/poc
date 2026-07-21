@@ -1,0 +1,220 @@
+REQUEST FOR QUOTATION
+RFQ No. AIS-DPD-2026-001 — Revision B
+Full-Body, High-Resolution Camera and Robotic Control Subsystem
+DermaPod© — 360° Dermatological Imaging Platform
+Issued by Aurora Imaging Systems, Inc.
+Questions, Proposals to: rsappington@aisderm.com
+CONFIDENTIAL — VENDOR DISTRIBUTION ONLY
+Complete RFQ materials, including Exhibit A, are distributed only upon execution of a mutual non-disclosure agreement (NDA).
+Table of Contents
+1.  Project Overview
+2.  Procurement Process, Phasing, and Engagement Model
+3.  Scope of Work
+4.  Technical Requirements
+5.  Software and Integration Requirements
+6.  Mechanical, Electrical, and Environmental
+7.  Serviceability, Lifecycle, and Support
+8.  Regulatory and Compliance
+9.  Project Schedule and Milestones
+10.  Deliverables
+11.  Pricing Format
+12.  Vendor Qualifications
+13.  Submission Requirements
+14.  Evaluation Criteria
+15.  Terms and Conditions
+16.  Contact and Submission
+Exhibit A — Design Experience and Current Assumptions (Informational)
+1. Project Overview
+Aurora Imaging Systems, Inc. (“Aurora”) is developing DermaPod©, a 360° full-body dermatological imaging system intended to support clinical screening, longitudinal lesion monitoring, and AI-assisted classification across a defined target set of dermatological conditions. The platform is being built for use in dermatology clinics, primary-care screening environments, and research settings.
+This RFQ solicits proposals from qualified vendors to design, build, integrate, and deliver the camera and robotic control subsystem of DermaPod©. The subsystem must achieve full-body coverage of an adult patient (Fitzpatrick skin types I–VI), coordinated by a positioning and synchronization architecture that completes a full acquisition within a clinically acceptable Patient Cycle Time.
+This RFQ is intentionally framed around performance, operational, clinical-workflow, and cost requirements rather than prescribed implementation approaches. Aurora’s prior design work, prototyping observations, and current architectural assumptions — including camera-count and robotic-architecture assumptions — are provided as informational reference material in Exhibit A — Design Experience and Current Assumptions. Exhibit A items are not mandatory requirements; vendors are encouraged to leverage them where useful and to propose superior or alternative approaches with supporting justification.
+1.1 Clinical Performance Context
+The imaging subsystem is expected to produce image quality sufficient to support Aurora’s intended clinical targets: classification of, at minimum, melanoma, basal cell carcinoma, psoriasis, seborrheic keratosis, and vitiligo, with Aurora targeting ≥0.85 classification accuracy on internal validation sets at the integrated-system level.
+Aurora recognizes that final clinical accuracy outcomes depend on downstream factors outside the vendor’s scope — including AI interpretation, training datasets, model development, and validation methodologies. The vendor’s responsibility under this RFQ is therefore defined in terms of measurable image-quality, coverage, color-fidelity, and acquisition-performance requirements (Sections 4–6), not end-to-end diagnostic accuracy.
+Image quality must support both pigmented-lesion analysis (cross-polarized capture) and surface/textural analysis (non-polarized capture).
+1.2 Out of Scope for This RFQ
+The following are explicitly outside the scope of this procurement and will be developed or sourced separately by Aurora:
+Downstream AI classification models and inference pipeline.
+Patient-facing clinical user interface and EMR integration.
+Cloud storage, PHI handling, and identity management.
+Cabinet and enclosure industrial design (the vendor must accommodate the volumetric and ingress envelope specified in Section 6).
+2. Procurement Process, Phasing, and Engagement Model
+2.1 Two-Phase Development Approach
+Phase 1 — Prototype / Proof-of-Concept (this RFQ). This RFQ covers the design, build, integration, and delivery of one (1) POC/prototype unit only, together with the Phase 1 deliverables in Section 10.
+Phase 2 — Commercial-Ready Systems (future). Aurora’s current intention is to manufacture approximately ten (10) systems for future clinical trials, followed by commercial scale-up. Phase 2 quantities, milestone structures, progress payments, commercial production terms, and broader manufacturing considerations will be developed during Phase 2 / final contracting discussions and are not committed under this RFQ. Phase 2 pricing requested in Section 11 is indicative and used for total-cost-of-ownership evaluation.
+Deliverable, documentation, and regulatory expectations in this RFQ are scoped to the prototype stage unless explicitly noted otherwise. Compliance-ready and production/commercialization expectations will be defined and contracted in Phase 2.
+2.2 Engagement Philosophy
+Aurora intends this procurement to support open technical dialogue, early risk identification, and collaborative engineering. Aurora values vendors who ask thoughtful technical questions, identify risks proactively, discuss tradeoffs honestly, recommend phased de-risking approaches, and challenge assumptions constructively. Vendor collaboration and communication quality are explicitly scored (Section 14).
+Following proposal receipt, Aurora may conduct technical Q&A sessions, architecture discussions, clarification workshops, and vendor capability presentations prior to down-selection.
+2.3 Multi-Vendor and Re-Scoping Rights
+Aurora prefers a single integrated vendor for this subsystem but is prepared for a multi-vendor outcome. Aurora reserves the right to split portions of this RFQ across multiple vendors, to separately source subsystems or components, and to re-scope portions of the work if required. Vendors with strong capability in a subset of the scope are encouraged to respond and to clearly identify the scope they propose to deliver, including any assumed partners or interfaces.
+2.4 Confidentiality and Disclosure Sequence
+A mutual NDA shall be fully executed prior to distribution of complete RFQ materials and detailed technical disclosures, including Exhibit A. Substantive technical exchange, Q&A, and workshops will occur only under NDA.
+3. Scope of Work
+The successful vendor (the “Contractor”) shall:
+Deliver a complete, integrated subsystem comprising the vendor-proposed camera array, positioning hardware, synchronized illumination, capture-control electronics, and embedded control software, meeting the performance requirements of Sections 4–7.
+Provide all calibration artifacts, fixtures, and procedures required for geometric, photometric, and color calibration, including across the full Fitzpatrick I–VI tonal range.
+Furnish a documented control API (REST or gRPC, vendor proposal) that exposes pose commands, capture triggers, status, fault state, and image retrieval to Aurora’s host application.
+Provide a coverage-validation report demonstrating that the proposed camera count and pose schedule achieve ≥ 98% body-surface coverage on a standard anthropomorphic phantom (5th–95th percentile adult).
+Deliver firmware and embedded-software architecture documentation, including the embedded control software, firmware update mechanism, and software/firmware configuration management approach.
+Document the data management and local storage design, including acquisition data flow, local retention, encryption and protection of locally stored data, and hand-off to Aurora’s host environment (Section 5).
+Implement and document the encryption and security requirements of Section 5.3.
+Deliver design documentation, including system architecture, optical layout, positioning-system kinematics, electrical schematics, BOM, and a regulatory pre-submission gap analysis.
+Provide documentation sufficient to support future transfer of the design to contract manufacturing partners, including design-for-manufacture (DFM) considerations and long-term manufacturability observations (Section 7.2).
+Support Aurora’s integration testing, factory acceptance test (FAT), and site acceptance test (SAT).
+Provide a 12-month warranty from final acceptance and appropriate field/service support for the POC build (Section 7.3).
+4. Technical Requirements
+Requirements are designated as Mandatory (M), Target (T), or Desired (D). Mandatory requirements must be met to be considered responsive. Target requirements represent Aurora’s preferred specification and will be used in scoring. Desired requirements are nice-to-have.
+Requirements in this section are performance-based wherever possible. Where Aurora holds working assumptions about implementation (e.g., camera count, sensor class, positioning architecture), those assumptions appear in Exhibit A as informational reference and are cross-referenced below. Vendors proposing approaches that differ from Exhibit A assumptions shall justify them against the performance requirements, Patient Cycle Time, and the BOM cost target (Section 11.1).
+4.1 Imaging Subsystem
+4.2 Positioning Subsystem (Robotic or Alternative)
+4.3 Synchronization and Control Architecture
+4.4 Illumination Subsystem
+4.5 Calibration
+The Contractor shall provide a complete calibration suite, including artifacts, software, and documented procedures. Calibration must be operator-runnable on-site in ≤ 30 minutes and fully automated thereafter. The vendor shall describe how calibration validity is maintained over time following deployment, including a standardized field calibration process and how calibration drift is detected and verified.
+5. Software and Integration Requirements
+5.1 Control Software, Firmware, and Embedded Systems
+Embedded vendor controller exposing the API specified in SYN-6.
+Documented firmware and embedded-software architecture, including the firmware update mechanism, version/configuration management, and rollback strategy (see also Section 7.1 regarding update implications for fielded units).
+Configurable pose schedules expressible as a versioned, declarative file (JSON or YAML).
+Operator-facing diagnostics UI (web-based acceptable) for calibration, fault inspection, and service.
+All software delivered with source-available service interfaces; full source delivery not required but escrow is acceptable.
+5.2 Data Output, Management, and Interoperability
+Raw and processed image output to a host-mounted directory or object store, with a manifest file per acquisition.
+Documented data management and local storage design: acquisition data flow, buffering, local retention policy, and hand-off to Aurora’s host environment.
+DICOM Visible Light Photography IOD wrapping at the system boundary (Target).
+Per-frame metadata schema published as the API contract (SYN-6).
+5.3 Cybersecurity, Encryption, and Data Protection
+All control and data interfaces over authenticated, TLS-protected channels (encryption in transit).
+Local data encryption at rest: all locally stored acquisition data, logs containing acquisition data, and buffered images shall be encrypted at rest using a current industry-standard algorithm (e.g., AES-256), with documented key management.
+Protection of locally stored acquisition data against unauthorized access, including access control on service and diagnostic interfaces; the vendor shall describe its approach to data sanitization on component replacement or decommissioning.
+Compliance-readiness for FDA premarket cybersecurity guidance (2023) and IEC 81001-5-1.
+Documented Software Bill of Materials (SBOM) for the delivered subsystem.
+6. Mechanical, Electrical, and Environmental
+7. Serviceability, Lifecycle, and Support
+7.1 Lifecycle and Obsolescence Management
+The vendor shall address lifecycle planning for the proposed design, including:
+Component lifecycle and end-of-life (EOL) management for key components (sensors, optics, controllers, actuators), including expected availability horizons.
+Mitigation planning for critical downstream obsolescence risks, including identification of single-source components and proposed alternates.
+Field-component interchangeability, such that replacement components can be installed in fielded units without full-system recalibration where practical (and with a defined recalibration procedure where not).
+Software/firmware update implications of component substitution, including how updates are qualified, distributed, and rolled back across fielded units.
+7.2 Field Serviceability and Manufacturing Transferability
+Modular replacement strategy: the design shall favor field-replaceable modules with documented replacement procedures and expected mean-time-to-repair.
+Self-diagnostic capability sufficient to localize faults to the replaceable-module level.
+Remote troubleshooting capability (secure remote diagnostics access, exportable logs), consistent with Section 5.3.
+Overall field-service efficiency: the vendor shall describe its field-service model and the design features supporting service economics at clinical-deployment scale.
+Manufacturing transferability: design documentation shall be sufficient to support future transfer of the design to contract manufacturing partners, including DFM observations, assembly and test documentation expectations, and long-term manufacturability considerations.
+7.3 Warranty and POC Support
+The vendor shall provide a 12-month warranty from final acceptance covering parts, labor, and software defects, together with appropriate field/service support for the POC build (response expectations to be mutually agreed at contracting). Detailed service-level requirements (SLRs), deployment geographies, and response-time expectations for production units will be defined in Phase 2; production service-tier pricing requested in Section 11 may therefore be provided on a rough-order-of-magnitude (ROM) basis with stated assumptions.
+8. Regulatory and Compliance
+Aurora intends to pursue FDA 510(k) clearance for the integrated DermaPod© system, and may additionally pursue Health Canada medical-device licensing; the subsystem design and documentation shall not preclude either pathway. This subsystem is a major contributor to the FDA submission, and the Contractor shall design and document the subsystem to support that path.
+Consistent with the phased approach in Section 2.1, the expectations below reflect prototype-stage development. Full compliance-ready certification and production-stage quality-system expectations will be defined in Phase 2; vendors may quote certification activities as options.
+IEC 60601-1 (medical electrical equipment, general safety) — design compliance required; certification optional but quotable.
+IEC 60601-1-2 (EMC) — compliance required.
+IEC 62471 (photobiological safety) — compliance required at the patient position, including spectral channels (ILL-6).
+IEC 62304 (medical device software lifecycle) — vendor software classified per its risk class; documentation deliverables in Section 10.
+ISO 14971 (risk management) — a subsystem-level risk management file is required (Section 10); Aurora maintains the system-level file.
+IEC 62366-1 (usability engineering) — applied primarily at the integrated-system level by Aurora; the vendor shall support with subsystem use-related risk inputs (operator and service interactions).
+ISO 10218-1/-2, ISO/TS 15066 (industrial and collaborative robots) — applicable to the powered-motion subsystem.
+ISO 13485 — vendor design and manufacturing operations preferred to be ISO 13485-certified or operating under an equivalent QMS for this prototype phase; Phase 2 expectations will be defined at contracting.
+21 CFR Part 820 (FDA QSR) — vendor processes shall not preclude Aurora’s 510(k) submission.
+Cybersecurity per FDA premarket guidance (2023) and IEC 81001-5-1 (Section 5.3).
+9. Project Schedule and Milestones
+The following milestone schedule is indicative. Aurora recognizes this is an ambitious timeline and expects that the design experience and assumptions shared in Exhibit A may accelerate vendor work; however, vendors are strongly encouraged to propose adjustments with justification, and schedule realism is scored explicitly (Section 14, E5).
+Milestone definitions, acceptance criteria, and any milestone-based progress-payment structure will be finalized during final contracting discussions. Aurora is open to vendor-proposed milestone payment structures tied to successful technical and program milestones (Section 11).
+10. Deliverables
+Deliverables under this RFQ are scoped to Phase 1 (POC). Production and commercialization deliverables — including production-level documentation, manufacturing transfer packages, and commercial service documentation — will be defined in Phase 2; vendors may identify and price such items as options.
+10.1 Phase 1 Hardware and Validation Deliverables
+One (1) integrated camera and positioning-control subsystem (POC unit) meeting all Mandatory requirements herein.
+Calibration artifacts, fixtures, and software, including the Fitzpatrick I–VI verification suite (CAL-4) and the standardized field calibration process (Section 4.5).
+Coverage-validation report on a standard anthropomorphic phantom (≥ 98% body-surface coverage, IMG-13).
+Color and skin-tone fairness validation report (per-band ΔE₀₀).
+FAT and SAT plans and signed reports.
+Training (minimum 2 days, on-site) for Aurora engineering and clinical staff.
+10.2 Phase 1 Documentation Deliverables
+System architecture document, optical layout, positioning-system kinematics document, electrical schematics, and full BOM.
+Firmware and embedded-software architecture documentation, including update and configuration-management approach (Section 5.1).
+Data management, local storage, and encryption/security design documentation (Sections 5.2–5.3).
+Control API specification (OpenAPI or Protobuf) and operator and service documentation.
+Software lifecycle documentation per IEC 62304, scoped to the prototype stage (SDP, SRS, software architecture, V&V records, problem reports).
+Subsystem risk management file per ISO 14971.
+Serviceability and lifecycle documentation per Section 7 (EOL/obsolescence assessment, modular replacement procedures, self-diagnostic and remote-troubleshooting documentation).
+Manufacturing-transferability documentation per Section 7.2 (DFM observations and transition-supporting documentation, prototype-stage depth).
+EMC, photobiological-safety, and (where applicable) electrical-safety test reports or pre-compliance reports.
+Software Bill of Materials (SBOM).
+Regulatory pre-submission gap analysis supporting Aurora’s 510(k) path (Section 8).
+11. Pricing Format
+11.1 Production BOM Cost Target
+Aurora’s target bill-of-materials (BOM) cost for this subsystem at production quantities is less than USD $180,000 per unit. Vendors shall state the expected production-unit BOM cost of their proposed architecture, address achievability of the target, and identify the principal cost drivers and cost-reduction pathways from prototype to production. Architectural choices (including camera count) should be justified in part against this target (IMG-1).
+11.2 Pricing Structure
+Vendors shall structure their pricing as follows. Each line shall be quoted separately and shall include a brief basis-of-estimate. This RFQ contracts Phase 1 only; Phase 2 pricing is indicative and used for total-cost-of-ownership evaluation (Section 2.1).
+Non-Recurring Engineering (NRE) for design, integration, and Phase 1 prototype delivery.
+Bill of Materials (BOM) cost for the Phase 1 prototype unit.
+Calibration suite (artifacts, fixtures, software).
+FAT, SAT, and on-site commissioning.
+Indicative Phase 2 production unit price (firm, not-to-exceed, or ROM with stated assumptions) for quantities of 1, 3, and 10 units, with reference to the BOM target in Section 11.1.
+Optional: additional spectral channels beyond the required ILL-6 channel.
+Optional: extended warranty and service tiers (12, 24, 36 months). ROM pricing with stated assumptions is acceptable, given that service-level requirements, deployment geographies, and response-time expectations will be defined in Phase 2 (Section 7.3).
+Spare parts list with recommended stocking levels.
+Proposed milestone payment schedule tied to Section 9. Aurora is open to vendor-proposed progress-payment structures; final milestone definitions, acceptance criteria, and payment terms will be settled at contracting.
+All prices in USD. Quote validity ≥ 90 days. Travel and per-diem may be quoted as a not-to-exceed allowance.
+12. Vendor Qualifications
+Aurora seeks vendors with demonstrated experience in the following. Vendors shall include a brief statement against each.
+Multi-camera high-resolution imaging system integration, ideally medical or industrial inspection.
+Precision motion control in human-adjacent or collaborative environments.
+Color-managed imaging pipelines and calibration, ideally including skin-tone or biological-tissue work.
+Embedded firmware/control systems for regulated or safety-relevant products.
+Medical device program experience and familiarity with the IEC 60601 series, IEC 62304, and ISO 14971.
+ISO 13485 certification (preferred) or equivalent QMS.
+Designs carried from prototype through manufacturing transfer and field service (preferred).
+Vendors shall list at least two (2) reference projects of comparable scope completed in the last five (5) years, with contact information for client references (subject to NDA).
+Per Section 2.3, vendors with strong capability in a subset of this scope are encouraged to respond, clearly identifying their proposed scope, assumed partners, and interface boundaries.
+13. Submission Requirements
+Proposals shall be submitted electronically as a single PDF (executive summary + technical volume) and a separate sealed PDF (commercial volume), to the contact in Section 16. The technical volume shall be organized in the same order as this RFQ and shall not exceed forty (40) pages, exclusive of appendices.
+Technical Volume Required Contents
+Executive summary (≤ 2 pages).
+Compliance matrix: line-by-line response to every requirement in Sections 4 through 8, marked Comply / Comply with Comment / Exception.
+Proposed system architecture, including camera count and justification (IMG-1), layout, positioning concept, illumination, and synchronization. Where the proposal departs from Exhibit A assumptions, the departure and its rationale shall be identified explicitly.
+Coverage analysis demonstrating ≥ 98% body-surface coverage with the proposed camera count and pose schedule.
+Patient positioning approach per ROB-10 (detection, guidance, and repositioning alerts).
+Color and Fitzpatrick I–VI fairness approach (this section will be scored explicitly).
+Achievable Patient Cycle Time and its derivation (ROB-5).
+Serviceability, lifecycle, and obsolescence approach per Section 7.
+Risk register with top ten (10) technical risks and mitigations.
+Schedule and resource plan, including any proposed adjustments to Section 9 with justification.
+Vendor qualifications and references per Section 12.
+Commercial Volume Required Contents
+Pricing structured per Section 11, including the production BOM cost assessment (Section 11.1).
+Proposed milestone payment structure (Section 11.2).
+Proposed terms and conditions or red-lines to Aurora’s standard terms (provided on request).
+Quote validity statement.
+14. Evaluation Criteria
+Proposals will be evaluated against the following weighted criteria. Aurora reserves the right to award based on best value, not lowest price, and to award all, part, or none of the scope (Section 2.3).
+15. Terms and Conditions
+This RFQ is not an offer to contract. Aurora may decline any or all proposals, may modify or cancel this RFQ, and is not obligated to reimburse vendor proposal costs.
+Aurora reserves the right to split portions of this RFQ across multiple vendors, to separately source subsystems, or to re-scope portions of the work if required (Section 2.3).
+All information provided by Aurora is Confidential and subject to a mutual NDA, which shall be fully executed prior to distribution of complete RFQ materials and substantive technical exchange (Section 2.4).
+Intellectual property: Aurora-furnished IP remains Aurora’s. Vendor background IP remains the vendor’s, with a non-exclusive license to Aurora to use, maintain, service, and modify the delivered subsystem. Foreground IP arising from work specifically funded by Aurora under this engagement shall be assigned to Aurora; the vendor shall retain a license-back for non-medical-imaging fields of use. Final IP allocation negotiated in the resulting agreement.
+Warranty: minimum 12 months from final acceptance covering parts, labor, and software defects, with appropriate field/service support for the POC build (Section 7.3).
+Milestone structures, progress payments, commercial production terms, and broader manufacturing considerations will be developed during Phase 2 / final contracting discussions (Section 2.1).
+Indemnification, liability caps, and insurance requirements per Aurora’s standard terms (provided on request).
+Export control: the vendor shall identify any ECCN/ITAR-controlled components in its proposal.
+Data handling: any patient or clinical data exchanged during integration testing shall be handled per Aurora’s data-handling policy and applicable HIPAA and GDPR requirements, and protected consistent with Section 5.3.
+16. Contact and Submission0.
+All questions and submissions shall be directed to:
+Vendors are requested to acknowledge receipt of this RFQ and indicate intent to bid by [reissue date + 2 weeks].
+Exhibit A — Design Experience and Current Assumptions (Informational)
+Purpose. This exhibit shares Aurora’s current thinking, prior research, and prototyping learnings so that vendors can benefit from work already done. The content of this exhibit is informational only and does not constitute mandatory requirements. Vendors are free — and encouraged — to propose superior or alternative approaches, provided the performance requirements of Sections 4–7 are met and departures are identified and justified in the technical volume (Section 13).
+A.1 Camera and Image-Quality Assumptions
+Aurora’s current working assumption is a maximum of six (6) imaging cameras, balancing coverage, synchronization complexity, calibration burden, and production BOM cost (Section 11.1).
+Aurora currently assumes 50 MP-class CMOS color sensors (Bayer or quad-Bayer), with global shutter preferred for motion robustness during the acquisition cycle.
+[Aurora to insert: summary of image-quality learnings from prior prototyping, including lens/sensor pairings evaluated and observed tradeoffs.]
+A.2 Positioning Architecture Assumptions
+Aurora has evaluated articulated-arm, gantry, and ring concepts and currently holds working assumptions about arm geometry under internal review. Vendors should treat architecture selection as open, subject to the performance requirements of Section 4.2.
+[Aurora to insert: summary of robotic-architecture tradeoff observations and any constraints identified in prior prototyping.]
+A.3 Region-of-Interest (ROI) Workflow Concepts
+Aurora’s intended clinical workflow includes whole-body survey capture followed by high-resolution ROI capture (IMG-3) of flagged regions, ideally within the same Patient Cycle Time or as a short follow-on sequence.
+[Aurora to insert: ROI analysis concepts and workflow assumptions, including operator-in-the-loop expectations.]
+A.4 Cycle-Time and Prior Prototyping Observations
+The Patient Cycle Time targets in ROB-5 (≤ 90 s mandatory, ≤ 60 s target) derive from clinical-workflow modeling of screening throughput. Aurora welcomes vendor analysis of achievability given the imaging, motion, polarization-switching, and spectral-channel requirements, and will weigh well-reasoned challenges to these targets favorably (Section 14, E7).
+[Aurora to insert: prior prototyping observations and constraints identified by Aurora.]
