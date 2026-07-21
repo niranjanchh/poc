@@ -269,8 +269,10 @@ async function exportRFQtoPDF() {
       div.contentEditable = 'true';
       
       let savedVal = localStorage.getItem('derma_rfq_' + key);
-      if (savedVal === null && typeof rfqSavedComments !== 'undefined' && rfqSavedComments && rfqSavedComments[key] !== undefined) {
+      // If savedVal is empty, null, or old 'NA', override with rfqSavedComments
+      if ((savedVal === null || savedVal === 'NA' || savedVal === '') && typeof rfqSavedComments !== 'undefined' && rfqSavedComments && rfqSavedComments[key] !== undefined) {
         savedVal = rfqSavedComments[key];
+        localStorage.setItem('derma_rfq_' + key, savedVal);
       }
       
       if (savedVal) {
