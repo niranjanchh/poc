@@ -20,6 +20,9 @@
     margin: 0;
     padding: 16px;
     line-height: 1.5; /* Increased spacing for readability */
+    zoom: 80%;
+    -moz-transform: scale(0.8);
+    -moz-transform-origin: 0 0;
   }
   
   .container {
