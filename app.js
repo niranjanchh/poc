@@ -2144,6 +2144,10 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
             nathanModel = model;
             mannequinGroup.add(nathanModel);
             console.log('Successfully loaded realistic patient body model from embedded Base64 data!');
+            if (typeof window.setPatient3DPose === 'function') {
+              const poseSel = document.getElementById('g3d-pose-select');
+              window.setPatient3DPose(poseSel ? poseSel.value : 'default');
+            }
           },
           function (err) {
             console.error('Error parsing embedded GLB:', err);
@@ -2153,6 +2157,55 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
         console.error('Error decoding embedded GLB:', e);
       }
     }
+
+  window.setPatient3DPose = function(poseKey) {
+    window.g3dActivePose = poseKey || 'default';
+    if (!g3dBoneLeftArm && !g3dBoneRightArm && !nathanModel) return;
+
+    if (g3dBoneLeftArm && g3dBoneRightArm) {
+      if (poseKey === 'arms-forward') {
+        // Rotate arms forward (front/back pitch around X axis)
+        g3dBoneLeftArm.rotation.x = -Math.PI / 2.5; 
+        g3dBoneRightArm.rotation.x = -Math.PI / 2.5;
+        g3dBoneLeftArm.rotation.z = 0.2;
+        g3dBoneRightArm.rotation.z = -0.2;
+        if (g3dBoneLeftLeg) g3dBoneLeftLeg.rotation.x = 0;
+        if (g3dBoneRightLeg) g3dBoneRightLeg.rotation.x = 0;
+      } else if (poseKey === 'arms-up') {
+        // T-Pose / Abducted Arms
+        g3dBoneLeftArm.rotation.x = 0;
+        g3dBoneRightArm.rotation.x = 0;
+        g3dBoneLeftArm.rotation.z = Math.PI / 2.2;
+        g3dBoneRightArm.rotation.z = -Math.PI / 2.2;
+        if (g3dBoneLeftLeg) g3dBoneLeftLeg.rotation.x = 0;
+        if (g3dBoneRightLeg) g3dBoneRightLeg.rotation.x = 0;
+      } else if (poseKey === 'overhead') {
+        // Hands Overhead (Axilla pose)
+        g3dBoneLeftArm.rotation.x = 0;
+        g3dBoneRightArm.rotation.x = 0;
+        g3dBoneLeftArm.rotation.z = Math.PI * 0.85;
+        g3dBoneRightArm.rotation.z = -Math.PI * 0.85;
+        if (g3dBoneLeftLeg) g3dBoneLeftLeg.rotation.x = 0;
+        if (g3dBoneRightLeg) g3dBoneRightLeg.rotation.x = 0;
+      } else if (poseKey === 'step-forward') {
+        // Legs & Arms Step Forward / Back
+        g3dBoneLeftArm.rotation.x = Math.PI / 5;   // Left arm back
+        g3dBoneRightArm.rotation.x = -Math.PI / 5;  // Right arm forward
+        g3dBoneLeftArm.rotation.z = 0.3;
+        g3dBoneRightArm.rotation.z = -0.3;
+        if (g3dBoneLeftLeg) g3dBoneLeftLeg.rotation.x = -Math.PI / 7; // Left leg forward
+        if (g3dBoneRightLeg) g3dBoneRightLeg.rotation.x = Math.PI / 7;  // Right leg back
+      } else {
+        // Default Standard A-Pose
+        g3dBoneLeftArm.rotation.x = 0;
+        g3dBoneRightArm.rotation.x = 0;
+        g3dBoneLeftArm.rotation.z = 0.45;
+        g3dBoneRightArm.rotation.z = -0.45;
+        if (g3dBoneLeftLeg) g3dBoneLeftLeg.rotation.x = 0;
+        if (g3dBoneRightLeg) g3dBoneRightLeg.rotation.x = 0;
+      }
+    }
+  };
 
 
     // Build Gantry mechanicals
