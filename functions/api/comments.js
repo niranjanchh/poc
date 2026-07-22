@@ -27,7 +27,24 @@ export async function onRequestPost(context) {
       });
     }
     const body = await context.request.text();
-    await context.env.COMMENTS_KV.put("rfq_comments_data", body);
+    let incoming = {};
+    try {
+      incoming = JSON.parse(body);
+    } catch (e) {
+      incoming = {};
+    }
+
+    let existing = {};
+    try {
+      const currentRaw = await context.env.COMMENTS_KV.get("rfq_comments_data");
+      if (currentRaw) {
+        existing = JSON.parse(currentRaw);
+      }
+    } catch (e) {}
+
+    const merged = { ...existing, ...incoming };
+    await context.env.COMMENTS_KV.put("rfq_comments_data", JSON.stringify(merged));
+
     return new Response(JSON.stringify({ status: "success" }), {
       headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" }
     });

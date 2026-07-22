@@ -250,30 +250,23 @@ async function exportRFQtoPDF() {
     }
   }
 
-  // Poll every 5 seconds for fast live sync across all devices
-  setInterval(syncCommentsFromKV, 5000);
+  // Poll every 3 seconds for near-instant live sync across all devices
+  setInterval(syncCommentsFromKV, 3000);
 
-  let saveDebounceTimer = null;
-  function saveAllCommentsToKV() {
-    clearTimeout(saveDebounceTimer);
-    // 800ms debounce ensures rapid save to Cloudflare KV
-    saveDebounceTimer = setTimeout(async () => {
-      const fields = document.querySelectorAll('.rfq-textarea');
-      const commentsObj = {};
-      fields.forEach(field => {
-        const key = field.getAttribute('data-key');
-        commentsObj[key] = field.innerHTML || '';
-      });
+  let saveDebounceTimers = {};
+  function saveSingleFieldToKV(key, value) {
+    if (saveDebounceTimers[key]) clearTimeout(saveDebounceTimers[key]);
+    saveDebounceTimers[key] = setTimeout(async () => {
       try {
         await fetch('/api/comments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(commentsObj)
+          body: JSON.stringify({ [key]: value || '' })
         });
       } catch (e) {
         // Fallback silently if offline or not on Cloudflare
       }
-    }, 800);
+    }, 600);
   }
 
   function setupTextareaPersistence() {
@@ -303,13 +296,13 @@ async function exportRFQtoPDF() {
       div.addEventListener('input', () => {
         localStorage.setItem('derma_rfq_' + key, div.innerHTML);
         triggerAutoSave();
-        saveAllCommentsToKV();
+        saveSingleFieldToKV(key, div.innerHTML);
       });
       
       textarea.parentNode.replaceChild(div, textarea);
     });
 
-    // Attempt live fetch from Cloudflare KV
+    // Attempt immediate live fetch from Cloudflare KV
     syncCommentsFromKV();
   }
 
