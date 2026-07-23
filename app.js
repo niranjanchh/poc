@@ -228,6 +228,7 @@ async function exportRFQtoPDF() {
 
   // LocalStorage Persistence & Cloudflare KV Database Sync for compliance fields
   async function syncCommentsFromKV() {
+    if (!window.location.protocol.startsWith('http')) return;
     try {
       const res = await fetch('/api/comments?cb=' + Date.now(), { cache: 'no-store' });
       if (res.ok) {
@@ -255,6 +256,7 @@ async function exportRFQtoPDF() {
 
   let saveDebounceTimers = {};
   function saveSingleFieldToKV(key, value) {
+    if (!window.location.protocol.startsWith('http')) return;
     if (saveDebounceTimers[key]) clearTimeout(saveDebounceTimers[key]);
     saveDebounceTimers[key] = setTimeout(async () => {
       try {
@@ -392,14 +394,11 @@ async function exportRFQtoPDF() {
 
 
   const presets = {
+    imx455: { w: 36.0, h: 24.0, p: 3.76, pw: 9568, ph: 6380 },
     gmax3265: { w: 29.9, h: 22.4, p: 3.2, pw: 9344, ph: 7000 },
+    imx927: { w: 28.08, h: 28.08, p: 2.74, pw: 10248, ph: 10248 },
     imx661: { w: 46.15, h: 32.87, p: 3.45, pw: 13376, ph: 9528 },
-    "5dmk4": { w: 36, h: 24, p: 5.36, pw: 6720, ph: 4480 },
-    imx530: { w: 14.6, h: 12.62, p: 2.74, pw: 5328, ph: 4608 },
-    imx541: { w: 14.13, h: 10.38, p: 2.74, pw: 5136, ph: 3752 },
-    imx542: { w: 14.13, h: 10.35, p: 3.45, pw: 4096, ph: 3000 },
-    mf50: { w: 43.8, h: 32.9, p: 3.76, pw: 8256, ph: 6192 },
-    imx927: { w: 25.54, h: 20.01, p: 2.2, pw: 11608, ph: 9096 }
+    imx411: { w: 53.4, h: 40.0, p: 3.76, pw: 14192, ph: 10640 }
   };
 
   function applyPreset() {
@@ -495,9 +494,50 @@ async function exportRFQtoPDF() {
     });
   }
 
+  // Local slider/box syncing for Tab 4 (Model 3, prefixed with m3-)
+  const m3_wdSlider = document.getElementById('m3-wdSlider');
+  const m3_wdBox = document.getElementById('m3-wdBox');
+  const m3_flSlider = document.getElementById('m3-flSlider');
+  const m3_flBox = document.getElementById('m3-flBox');
+  const m3_apSlider = document.getElementById('m3-apSlider');
+  const m3_apBox = document.getElementById('m3-apBox');
+  const m3_reqResSlider = document.getElementById('m3-reqResSlider');
+  const m3_reqResBox = document.getElementById('m3-reqResBox');
+  const m3_cocSlider = document.getElementById('m3-cocSlider');
+  const m3_cocBox = document.getElementById('m3-cocBox');
+  const m3_cocPreset = document.getElementById('m3-cocPreset');
+  const m3_sensorPreset = document.getElementById('m3-sensorPreset');
 
+  sync(m3_wdSlider, m3_wdBox);
+  sync(m3_flSlider, m3_flBox);
+  sync(m3_apSlider, m3_apBox);
+  sync(m3_reqResSlider, m3_reqResBox);
 
+  if (m3_cocSlider && m3_cocBox) {
+    m3_cocSlider.addEventListener('input', () => {
+      m3_cocBox.value = m3_cocSlider.value;
+      if (m3_cocPreset) m3_cocPreset.value = 'custom';
+      calculate();
+    });
+    m3_cocBox.addEventListener('input', () => {
+      m3_cocSlider.value = m3_cocBox.value;
+      if (m3_cocPreset) m3_cocPreset.value = 'custom';
+      calculate();
+    });
+  }
 
+  sync(document.getElementById('maxCameraBudgetSlider'), document.getElementById('maxCameraBudget'));
+  sync(document.getElementById('m2-maxCameraBudgetSlider'), document.getElementById('m2-maxCameraBudget'));
+  sync(document.getElementById('m3-maxCameraBudgetSlider'), document.getElementById('m3-maxCameraBudget'));
+
+  window.setQuickBudget = function(prefix, amount) {
+    const p = prefix || '';
+    const input = document.getElementById(p + 'maxCameraBudget');
+    const slider = document.getElementById(p + 'maxCameraBudgetSlider');
+    if (input) input.value = amount;
+    if (slider) slider.value = amount;
+    calculate(p);
+  };
 
   // Cross-tab input mirroring logic
   const syncedInputIds = [
@@ -506,7 +546,7 @@ async function exportRFQtoPDF() {
     'sw', 'sh', 'pixelSize', 'pxw', 'pxh',
     'wdSlider', 'wdBox', 'flSlider', 'flBox', 'apSlider', 'apBox',
     'reqResSlider', 'reqResBox', 'cocPreset', 'cocSlider', 'cocBox',
-    'overlapX', 'g3dColCamsSlider', 'cameraUnitPrice', 'maxCameraBudget',
+    'overlapX', 'g3dColCamsSlider', 'cameraUnitPrice', 'maxCameraBudget', 'maxCameraBudgetSlider',
     'price50', 'price64', 'price100', 'price127', 'price150', 'priceCustom'
   ];
 
@@ -540,6 +580,11 @@ async function exportRFQtoPDF() {
               if (id === 'reqResBox') document.getElementById(target.prefix + 'reqResSlider').value = source.el.value;
               if (id === 'cocSlider') document.getElementById(target.prefix + 'cocBox').value = source.el.value;
               if (id === 'cocBox') document.getElementById(target.prefix + 'cocSlider').value = source.el.value;
+              if (id === 'maxCameraBudgetSlider') document.getElementById(target.prefix + 'maxCameraBudget').value = source.el.value;
+              
+              if (id === 'overlapX' && typeof window.updateOverlapValue === 'function') {
+                window.updateOverlapValue(source.el.value, target.prefix);
+              }
               
               if (id === 'sensorPreset' || id === 'cocPreset') {
                 target.el.dispatchEvent(new Event('change'));
@@ -681,7 +726,7 @@ async function exportRFQtoPDF() {
     const patWidthM = (document.getElementById(prefix + 'patientEnvW') ? parseFloat(document.getElementById(prefix + 'patientEnvW').value) : 1.0) || 1.0;
     const patHeightM = (document.getElementById(prefix + 'patientEnvH') ? parseFloat(document.getElementById(prefix + 'patientEnvH').value) : 2.0) || 2.0;
     const ov = (parseFloat(document.getElementById(prefix + 'overlapX') ? document.getElementById(prefix + 'overlapX').value : 0) || 0) / 100;
-    const targetPxMm = parseFloat(document.getElementById(prefix + 'targetPxMm') ? document.getElementById(prefix + 'targetPxMm').value : 30.0) || 30.0;
+    const targetPxMm = parseFloat(document.getElementById(prefix + 'reqResBox') ? document.getElementById(prefix + 'reqResBox').value : (document.getElementById(prefix + 'targetPxMm') ? document.getElementById(prefix + 'targetPxMm').value : 30.0)) || 30.0;
     
     const ap = parseFloat(document.getElementById(prefix + 'apBox') ? document.getElementById(prefix + 'apBox').value : 8.0) || 8.0;
     const cocMm = (parseFloat(document.getElementById(prefix + 'cocBox') ? document.getElementById(prefix + 'cocBox').value : 3.0) || 3.0) / 1000;
@@ -692,228 +737,246 @@ async function exportRFQtoPDF() {
     
     const targetW = patWidthM * 1000;
     
-    const resolutions = [
-      { mp: 50, px: 50000000 },
-      { mp: 64, px: 64000000 },
-      { mp: 100, px: 100000000 },
-      { mp: 127, px: 127000000 },
-      { mp: 150, px: 150000000 }
-    ];
-    
-    const formats = [
-      { name: "APS-C", w: 23.6, h: 15.6, ratio: 1.5 },
-      { name: "Full Frame", w: 36.0, h: 24.0, ratio: 1.5 },
-      { name: "Medium Format", w: 44.0, h: 33.0, ratio: 1.333 },
-      { name: "Large Format", w: 46.15, h: 32.87, ratio: 1.404 },
-      { name: "Large Medium", w: 53.4, h: 40.0, ratio: 1.335 }
+    const realSensors = [
+      { name: "Sony IMX455", fmtName: "Full Frame", mp: 61, w: 36.0, h: 24.0, pSize: 3.76, pxw: 9568, pxh: 6380, priceKey: '64' },
+      { name: "Gpixel GMAX3265", fmtName: "APS-H / Medium Format", mp: 65, w: 29.9, h: 22.4, pSize: 3.20, pxw: 9344, pxh: 7000, priceKey: '64' },
+      { name: "Sony IMX927 / IMX937", fmtName: "Type 2.5\" Square", mp: 105, w: 28.08, h: 28.08, pSize: 2.74, pxw: 10248, pxh: 10248, priceKey: '100' },
+      { name: "Sony IMX661", fmtName: "3.6\" Large Format", mp: 127, w: 46.15, h: 32.87, pSize: 3.45, pxw: 13376, pxh: 9528, priceKey: '127' },
+      { name: "Sony IMX411", fmtName: "Large Medium Format", mp: 151, w: 53.4, h: 40.0, pSize: 3.76, pxw: 14192, pxh: 10640, priceKey: '150' }
     ];
 
     let rows = [];
     
-    resolutions.forEach(res => {
-      formats.forEach(fmt => {
-        const pxH = Math.round(Math.sqrt(res.px / fmt.ratio));
-        const pxW = Math.round(pxH * fmt.ratio);
-        const pixelSizeUm = (fmt.w / pxW) * 1000;
+    realSensors.forEach(sensor => {
+      const pxH = sensor.pxh;
+      const pxW = sensor.pxw;
+      const pixelSizeUm = sensor.pSize;
+      const fmtW = sensor.w;
+      const fmtH = sensor.h;
+      const ratio = fmtW / fmtH;
+      
+      let all_configs = [];
+      let constrained_configs = [];
+      
+      for (let fl = 10; fl <= 150; fl++) {
+          for (let wd = 300; wd <= 2000; wd += 10) {
+              if (wd <= fl) continue;
+              
+              const mag = fl / (wd - fl);
+              const fovW = fmtW / mag;
+              const fovH = fmtH / mag;
+              
+              const density = Math.min(pxW / fovW, pxH / fovH);
+              const near = (wd * fl * fl) / (fl * fl + (ap * cocMm * (wd - fl)));
+              const far = (wd * fl * fl) / (fl * fl - (ap * cocMm * (wd - fl)));
+              const dof = (far < 0 || far > 99999) ? 9999 : (far - near);
+              
+              const totalFovW = fovW + (numColumns - 1) * (fovW * (1 - ov));
+              const excessFOV = totalFovW - targetW;
+              
+              const fovHM = fovH / 1000;
+              const stepH = fovHM * (1 - ov);
+              let cams = 1;
+              if (patHeightM > fovHM) cams = Math.ceil((patHeightM - fovHM) / (stepH || 0.001)) + 1;
+              
+              if (cams <= 15) {
+                  const config = {
+                      fl: fl, wd: wd, fovW: fovW, totalFovW: totalFovW, fovH: fovH, 
+                      density: density, dof: dof, excessFOV: excessFOV, cams: cams
+                  };
+                  
+                  all_configs.push(config);
+                  
+                  if (totalFovW >= targetW && totalFovW <= targetW * 1.25) {
+                      constrained_configs.push(config);
+                  }
+              }
+          }
+      }
+      
+      const fallback = { fl: 35, wd: 1000, fovW: targetW, totalFovW: targetW, fovH: targetW / ratio, density: 0, dof: 0, excessFOV: 0, cams: 1 };
+      
+      let best_case1 = fallback;
+      let best_case2 = fallback;
+      let best_case3 = fallback;
+      
+      if (all_configs.length > 0) {
+          let case1_candidates = all_configs.filter(c => c.density >= targetPxMm);
+          if (case1_candidates.length === 0) {
+              case1_candidates = [...all_configs];
+          }
+          case1_candidates.sort((a, b) => {
+              if (a.cams !== b.cams) return a.cams - b.cams;
+              const diffA = Math.abs(a.density - targetPxMm);
+              const diffB = Math.abs(b.density - targetPxMm);
+              if (Math.abs(diffA - diffB) > 0.1) return diffA - diffB;
+              if (Math.abs(b.dof - a.dof) > 1.0) return b.dof - a.dof;
+              return Math.abs(a.excessFOV) - Math.abs(b.excessFOV);
+          });
+          best_case1 = case1_candidates[0];
+      }
+      
+      if (constrained_configs.length > 0) {
+          let case2_candidates = [...constrained_configs];
+          case2_candidates.sort((a, b) => {
+              if (a.cams !== b.cams) return a.cams - b.cams;
+              if (Math.abs(b.density - a.density) > 0.1) return b.density - a.density;
+              if (Math.abs(a.excessFOV - b.excessFOV) > 10.0) return a.excessFOV - b.excessFOV;
+              return b.dof - a.dof;
+          });
+          best_case2 = case2_candidates[0];
+          
+          let case3_candidates = [...constrained_configs];
+          case3_candidates.sort((a, b) => {
+              if (a.cams !== b.cams) return a.cams - b.cams;
+              if (Math.abs(b.dof - a.dof) > 10.0) return b.dof - a.dof;
+              if (Math.abs(b.density - a.density) > 0.1) return b.density - a.density;
+              if (Math.abs(a.excessFOV - b.excessFOV) > 10.0) return a.excessFOV - b.excessFOV;
+              return 0;
+          });
+          best_case3 = case3_candidates[0];
+      }
+      
+      const p50 = parseFloat(document.getElementById(prefix + 'price50')?.value || 6500);
+      const p64 = parseFloat(document.getElementById(prefix + 'price64')?.value || 6500);
+      const p100 = parseFloat(document.getElementById(prefix + 'price100')?.value || 8000);
+      const p127 = parseFloat(document.getElementById(prefix + 'price127')?.value || 12000);
+      const p150 = parseFloat(document.getElementById(prefix + 'price150')?.value || 15000);
+      const pCustom = parseFloat(document.getElementById(prefix + 'priceCustom')?.value || 6500);
+
+      const resPrices = {
+        '64': p64,
+        '100': p100,
+        '127': p127,
+        '150': p150
+      };
+      const unitPrice = resPrices[sensor.priceKey] || pCustom;
+      const maxBudgetInput = document.getElementById(prefix + 'maxCameraBudget');
+      const maxBudget = maxBudgetInput ? (parseFloat(maxBudgetInput.value) || 100000) : 100000;
+      
+      let totalCams1 = 0, totalCams2 = 0, totalCams3 = 0;
+      let colDetail1 = '', colDetail2 = '', colDetail3 = '';
+
+      if (prefix === 'm3-') {
+        const m3CamsSlider = document.getElementById('m3-g3dColCamsSlider');
+        const m3CamsPerCol = m3CamsSlider ? (parseInt(m3CamsSlider.value) || 2) : 2;
         
-        if (pixelSizeUm >= 2.0 && pixelSizeUm <= 4.0) {
-            
-            let all_configs = [];
-            let constrained_configs = [];
-            
-            for (let fl = 10; fl <= 150; fl++) {
-                for (let wd = 300; wd <= 2000; wd += 10) {
-                    if (wd <= fl) continue;
-                    
-                    const mag = fl / (wd - fl);
-                    const fovW = fmt.w / mag;
-                    const fovH = fmt.h / mag;
-                    
-                    const density = Math.min(pxW / fovW, pxH / fovH);
-                    const near = (wd * fl * fl) / (fl * fl + (ap * cocMm * (wd - fl)));
-                    const far = (wd * fl * fl) / (fl * fl - (ap * cocMm * (wd - fl)));
-                    const dof = (far < 0 || far > 99999) ? 9999 : (far - near);
-                    
-                    const totalFovW = fovW + (numColumns - 1) * (fovW * (1 - ov));
-                    const excessFOV = totalFovW - targetW;
-                    
-                    const fovHM = fovH / 1000;
-                    const stepH = fovHM * (1 - ov);
-                    let cams = 1;
-                    if (patHeightM > fovHM) cams = Math.ceil((patHeightM - fovHM) / (stepH || 0.001)) + 1;
-                    
-                    if (cams <= 15) {
-                        const config = {
-                            fl: fl, wd: wd, fovW: fovW, totalFovW: totalFovW, fovH: fovH, 
-                            density: density, dof: dof, excessFOV: excessFOV, cams: cams
-                        };
-                        
-                        all_configs.push(config);
-                        
-                        // IF TOTAL FOV >= Required Envelope AND within 25% tolerance (prevent 8m massive FOVs)
-                        if (totalFovW >= targetW && totalFovW <= targetW * 1.25) {
-                            constrained_configs.push(config);
-                        }
-                    }
-                }
-            }
-            
-            const fallback = { fl: 35, wd: 1000, fovW: targetW, totalFovW: targetW, fovH: targetW / fmt.ratio, density: 0, dof: 0, excessFOV: 0, cams: 1 };
-            
-            let best_case1 = fallback;
-            let best_case2 = fallback;
-            let best_case3 = fallback;
-            
-            // CASE 1: Clinical (30 px/mm) - Uses ALL configs
-            if (all_configs.length > 0) {
-                let case1_candidates = all_configs.filter(c => c.density >= targetPxMm);
-                if (case1_candidates.length === 0) {
-                    case1_candidates = [...all_configs];
-                }
-                case1_candidates.sort((a, b) => {
-                    const diffA = Math.abs(a.density - targetPxMm);
-                    const diffB = Math.abs(b.density - targetPxMm);
-                    if (Math.abs(diffA - diffB) > 0.1) return diffA - diffB;
-                    if (Math.abs(b.dof - a.dof) > 1.0) return b.dof - a.dof;
-                    return Math.abs(a.excessFOV) - Math.abs(b.excessFOV);
-                });
-                best_case1 = case1_candidates[0];
-            }
-            
-            // CASE 2 & 3: Uses Constrained configs
-            if (constrained_configs.length > 0) {
-                // CASE 2: Maximum Resolution
-                let case2_candidates = [...constrained_configs];
-                case2_candidates.sort((a, b) => {
-                    if (Math.abs(a.excessFOV - b.excessFOV) > 10.0) return a.excessFOV - b.excessFOV;
-                    if (Math.abs(b.density - a.density) > 0.1) return b.density - a.density;
-                    return b.dof - a.dof;
-                });
-                best_case2 = case2_candidates[0];
-                
-                // CASE 3: Maximum DoF
-                let case3_candidates = [...constrained_configs];
-                case3_candidates.sort((a, b) => {
-                    if (Math.abs(b.dof - a.dof) > 10.0) return b.dof - a.dof;
-                    if (Math.abs(a.excessFOV - b.excessFOV) > 10.0) return a.excessFOV - b.excessFOV;
-                    return b.density - a.density;
-                });
-                best_case3 = case3_candidates[0];
-            }
-            
-            const p50 = parseFloat(document.getElementById(prefix + 'price50')?.value || 6500);
-            const p64 = parseFloat(document.getElementById(prefix + 'price64')?.value || 6500);
-            const p100 = parseFloat(document.getElementById(prefix + 'price100')?.value || 8000);
-            const p127 = parseFloat(document.getElementById(prefix + 'price127')?.value || 12000);
-            const p150 = parseFloat(document.getElementById(prefix + 'price150')?.value || 15000);
-            const pCustom = parseFloat(document.getElementById(prefix + 'priceCustom')?.value || 6500);
+        const fovW1_m = best_case1.fovW / 1000;
+        const stepW1 = fovW1_m * (1 - ov);
+        const cols1 = Math.max(1, (patWidthM > fovW1_m) ? Math.ceil((patWidthM - fovW1_m) / (stepW1 || 0.001)) + 1 : 1);
+        totalCams1 = cols1 * m3CamsPerCol;
+        colDetail1 = `${totalCams1} (${m3CamsPerCol}/col × ${cols1} cols)`;
+        
+        const fovW2_m = best_case2.fovW / 1000;
+        const stepW2 = fovW2_m * (1 - ov);
+        const cols2 = Math.max(1, (patWidthM > fovW2_m) ? Math.ceil((patWidthM - fovW2_m) / (stepW2 || 0.001)) + 1 : 1);
+        totalCams2 = cols2 * m3CamsPerCol;
+        colDetail2 = `${totalCams2} (${m3CamsPerCol}/col × ${cols2} cols)`;
+        
+        const fovW3_m = best_case3.fovW / 1000;
+        const stepW3 = fovW3_m * (1 - ov);
+        const cols3 = Math.max(1, (patWidthM > fovW3_m) ? Math.ceil((patWidthM - fovW3_m) / (stepW3 || 0.001)) + 1 : 1);
+        totalCams3 = cols3 * m3CamsPerCol;
+        colDetail3 = `${totalCams3} (${m3CamsPerCol}/col × ${cols3} cols)`;
+      } else if (prefix === 'm2-') {
+        totalCams1 = numColumns * best_case1.cams;
+        colDetail1 = `${totalCams1} (${best_case1.cams}/col × ${numColumns} cols)`;
 
-            const resPrices = {
-              50: p50,
-              64: p64,
-              100: p100,
-              127: p127,
-              150: p150
-            };
-            const unitPrice = resPrices[res.mp] || pCustom;
-            const maxBudgetInput = document.getElementById(prefix + 'maxCameraBudget');
-            const maxBudget = maxBudgetInput ? (parseFloat(maxBudgetInput.value) || 50000) : 50000;
-            
-            let totalCams1 = 0, totalCams2 = 0, totalCams3 = 0;
-            if (prefix === 'm3-') {
-              const m3CamsSlider = document.getElementById('m3-g3dColCamsSlider');
-              const m3CamsPerCol = m3CamsSlider ? (parseInt(m3CamsSlider.value) || 2) : 2;
-              
-              const fovW1_m = best_case1.fovW / 1000;
-              const stepW1 = fovW1_m * (1 - ov);
-              const cols1 = Math.max(1, (patWidthM > fovW1_m) ? Math.ceil((patWidthM - fovW1_m) / (stepW1 || 0.001)) + 1 : 1);
-              totalCams1 = cols1 * m3CamsPerCol;
-              
-              const fovW2_m = best_case2.fovW / 1000;
-              const stepW2 = fovW2_m * (1 - ov);
-              const cols2 = Math.max(1, (patWidthM > fovW2_m) ? Math.ceil((patWidthM - fovW2_m) / (stepW2 || 0.001)) + 1 : 1);
-              totalCams2 = cols2 * m3CamsPerCol;
-              
-              const fovW3_m = best_case3.fovW / 1000;
-              const stepW3 = fovW3_m * (1 - ov);
-              const cols3 = Math.max(1, (patWidthM > fovW3_m) ? Math.ceil((patWidthM - fovW3_m) / (stepW3 || 0.001)) + 1 : 1);
-              totalCams3 = cols3 * m3CamsPerCol;
-            } else if (prefix === 'm2-') {
-              totalCams1 = numColumns * best_case1.cams;
-              totalCams2 = numColumns * best_case2.cams;
-              totalCams3 = numColumns * best_case3.cams;
-            } else {
-              totalCams1 = best_case1.cams;
-              totalCams2 = best_case2.cams;
-              totalCams3 = best_case3.cams;
-            }
-            
-            const cost1 = totalCams1 * unitPrice;
-            const cost2 = totalCams2 * unitPrice;
-            const cost3 = totalCams3 * unitPrice;
-            
-            const fit1 = cost1 <= maxBudget ? `<span style="color: #10b981; font-weight: bold;">✔ Yes</span>` : `<span style="color: #ef4444; font-weight: bold;">✘ No</span>`;
-            const fit2 = cost2 <= maxBudget ? `<span style="color: #10b981; font-weight: bold;">✔ Yes</span>` : `<span style="color: #ef4444; font-weight: bold;">✘ No</span>`;
-            const fit3 = cost3 <= maxBudget ? `<span style="color: #10b981; font-weight: bold;">✔ Yes</span>` : `<span style="color: #ef4444; font-weight: bold;">✘ No</span>`;
+        totalCams2 = numColumns * best_case2.cams;
+        colDetail2 = `${totalCams2} (${best_case2.cams}/col × ${numColumns} cols)`;
 
-            rows.push({
-              resMP: res.mp,
-              fmtName: fmt.name,
-              pSize: pixelSizeUm,
-              sw: fmt.w, sh: fmt.h, pxw: pxW, pxh: pxH,
-              wd1: best_case1.wd, fl1: best_case1.fl, den1: best_case1.density, fovW1: best_case1.totalFovW, fovH1: best_case1.fovH, cams1: best_case1.cams,
-              wd2: best_case2.wd, fl2: best_case2.fl, den2: best_case2.density, fovW2: best_case2.totalFovW, fovH2: best_case2.fovH, cams2: best_case2.cams,
-              wd3: best_case3.wd, fl3: best_case3.fl, den3: best_case3.density, fovW3: best_case3.totalFovW, fovH3: best_case3.fovH, cams3: best_case3.cams,
-              cost1, cost2, cost3, fit1, fit2, fit3
-            });
-        }
+        totalCams3 = numColumns * best_case3.cams;
+        colDetail3 = `${totalCams3} (${best_case3.cams}/col × ${numColumns} cols)`;
+      } else {
+        totalCams1 = best_case1.cams;
+        colDetail1 = `${totalCams1} (1 col)`;
+
+        totalCams2 = best_case2.cams;
+        colDetail2 = `${totalCams2} (1 col)`;
+
+        totalCams3 = best_case3.cams;
+        colDetail3 = `${totalCams3} (1 col)`;
+      }
+      
+      const cost1 = totalCams1 * unitPrice;
+      const cost2 = totalCams2 * unitPrice;
+      const cost3 = totalCams3 * unitPrice;
+      
+      const pass1 = cost1 <= maxBudget;
+      const pass2 = cost2 <= maxBudget;
+      const pass3 = cost3 <= maxBudget;
+
+      const fit1 = pass1 ? `<span style="color: #10b981; font-weight: bold;">✔ Yes</span>` : `<span style="color: #ef4444; font-weight: bold;">✘ No</span>`;
+      const fit2 = pass2 ? `<span style="color: #10b981; font-weight: bold;">✔ Yes</span>` : `<span style="color: #ef4444; font-weight: bold;">✘ No</span>`;
+      const fit3 = pass3 ? `<span style="color: #10b981; font-weight: bold;">✔ Yes</span>` : `<span style="color: #ef4444; font-weight: bold;">✘ No</span>`;
+
+      rows.push({
+        resMP: sensor.mp,
+        fmtName: sensor.fmtName,
+        pSize: pixelSizeUm,
+        sw: fmtW, sh: fmtH, pxw: pxW, pxh: pxH,
+        wd1: best_case1.wd, fl1: best_case1.fl, den1: best_case1.density, fovW1: best_case1.totalFovW, fovH1: best_case1.fovH, dof1: best_case1.dof, cams1: colDetail1, pass1,
+        wd2: best_case2.wd, fl2: best_case2.fl, den2: best_case2.density, fovW2: best_case2.totalFovW, fovH2: best_case2.fovH, dof2: best_case2.dof, cams2: colDetail2, pass2,
+        wd3: best_case3.wd, fl3: best_case3.fl, den3: best_case3.density, fovW3: best_case3.totalFovW, fovH3: best_case3.fovH, dof3: best_case3.dof, cams3: colDetail3, pass3,
+        cost1, cost2, cost3, fit1, fit2, fit3
       });
     });
 
+    // Read filter dropdown values
+    const budgetFilterEl = document.getElementById(prefix ? prefix + 'matrix-filter-budget' : 'matrix-filter-budget');
+    const mpFilterEl = document.getElementById(prefix ? prefix + 'matrix-filter-mp' : 'matrix-filter-mp');
+    const budgetFilter = budgetFilterEl ? budgetFilterEl.value : 'all';
+    const mpFilter = mpFilterEl ? mpFilterEl.value : 'all';
+
+    // Get active camera config values to highlight active row
+    const curSw = parseFloat((document.getElementById(prefix + 'sw') || {}).value) || 0;
+    const curWd = parseFloat((document.getElementById(prefix + 'wdBox') || {}).value) || 0;
+    const curFl = parseFloat((document.getElementById(prefix + 'flBox') || {}).value) || 0;
+    const curPxw = parseFloat((document.getElementById(prefix + 'pxw') || {}).value) || 0;
+    const curPxh = parseFloat((document.getElementById(prefix + 'pxh') || {}).value) || 0;
+    const curMp = Math.round((curPxw * curPxh) / 1000000);
+
     let html = '';
     rows.forEach(r => {
-      html += `
-        <tr style="cursor: pointer; border-bottom: 1px solid #e2e8f0;" onclick="loadMatrixConfig('${prefix}', ${r.sw}, ${r.sh}, ${r.pSize.toFixed(2)}, ${r.pxw}, ${r.pxh}, ${r.wd1}, ${r.fl1})" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
-          <td rowspan="3" style="border-bottom: 2px solid var(--border);">${r.fmtName}</td>
-          <td rowspan="3" style="border-bottom: 2px solid var(--border);">${r.resMP}MP</td>
-          <td rowspan="3" style="border-bottom: 2px solid var(--border);">${r.pSize.toFixed(2)}</td>
-          <td style="font-weight: bold; color: #f59e0b;">Case 1 (Clinical)</td>
-          <td>${r.fl1}mm @ ${(r.wd1/10).toFixed(1)}cm</td>
-          <td style="color: #f59e0b; font-weight: bold;">${r.den1.toFixed(1)}</td>
-          <td>${(r.fovW1/1000).toFixed(2)}m &times; ${(r.fovH1/1000).toFixed(2)}m</td>
-          <td style="font-weight: bold;">${r.cams1}</td>
-          <td style="font-weight: bold;">$${r.cost1.toLocaleString()}</td>
-          <td>${r.fit1}</td>
-          <td><button style="padding: 2px 6px; font-size: 10px; cursor: pointer;">View in 3D</button></td>
-        </tr>
-      `;
-      html += `
-        <tr style="cursor: pointer; border-bottom: 1px solid #e2e8f0;" onclick="loadMatrixConfig('${prefix}', ${r.sw}, ${r.sh}, ${r.pSize.toFixed(2)}, ${r.pxw}, ${r.pxh}, ${r.wd2}, ${r.fl2})" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
-          <td style="font-weight: bold; color: #8b5cf6;">Case 2 (Max Res)</td>
-          <td>${r.fl2}mm @ ${(r.wd2/10).toFixed(1)}cm</td>
-          <td style="color: #8b5cf6; font-weight: bold;">${r.den2.toFixed(1)}</td>
-          <td>${(r.fovW2/1000).toFixed(2)}m &times; ${(r.fovH2/1000).toFixed(2)}m</td>
-          <td style="font-weight: bold;">${r.cams2}</td>
-          <td style="font-weight: bold;">$${r.cost2.toLocaleString()}</td>
-          <td>${r.fit2}</td>
-          <td><button style="padding: 2px 6px; font-size: 10px; cursor: pointer;">View in 3D</button></td>
-        </tr>
-      `;
-      html += `
-        <tr style="cursor: pointer; border-bottom: 2px solid var(--border);" onclick="loadMatrixConfig('${prefix}', ${r.sw}, ${r.sh}, ${r.pSize.toFixed(2)}, ${r.pxw}, ${r.pxh}, ${r.wd3}, ${r.fl3})" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
-          <td style="font-weight: bold; color: #10b981;">Case 3 (Max DoF)</td>
-          <td>${r.fl3}mm @ ${(r.wd3/10).toFixed(1)}cm</td>
-          <td style="color: #10b981; font-weight: bold;">${r.den3.toFixed(1)}</td>
-          <td>${(r.fovW3/1000).toFixed(2)}m &times; ${(r.fovH3/1000).toFixed(2)}m</td>
-          <td style="font-weight: bold;">${r.cams3}</td>
-          <td style="font-weight: bold;">$${r.cost3.toLocaleString()}</td>
-          <td>${r.fit3}</td>
-          <td><button style="padding: 2px 6px; font-size: 10px; cursor: pointer;">View in 3D</button></td>
-        </tr>
-      `;
+      if (mpFilter !== 'all' && parseInt(mpFilter) !== r.resMP) return;
+
+      const cases = [
+        { label: 'Case 1 (Clinical)', color: '#d97706', fl: r.fl1, wd: r.wd1, den: r.den1, fovW: r.fovW1, fovH: r.fovH1, dof: r.dof1, cams: r.cams1, cost: r.cost1, fit: r.fit1, pass: r.pass1 },
+        { label: 'Case 2 (Max Res)',  color: '#7c3aed', fl: r.fl2, wd: r.wd2, den: r.den2, fovW: r.fovW2, fovH: r.fovH2, dof: r.dof2, cams: r.cams2, cost: r.cost2, fit: r.fit2, pass: r.pass2 },
+        { label: 'Case 3 (Max DoF)',  color: '#059669', fl: r.fl3, wd: r.wd3, den: r.den3, fovW: r.fovW3, fovH: r.fovH3, dof: r.dof3, cams: r.cams3, cost: r.cost3, fit: r.fit3, pass: r.pass3 }
+      ];
+
+      const visibleCases = cases.filter(c => budgetFilter === 'all' || (budgetFilter === 'pass' && c.pass));
+      if (visibleCases.length === 0) return;
+
+      visibleCases.forEach((c, idx) => {
+        const isActive = Math.abs(curSw - r.sw) < 0.5 && Math.abs(curWd - c.wd) < 15 && Math.abs(curFl - c.fl) < 5 && Math.abs(curMp - r.resMP) <= 1;
+        const bgStyle = isActive ? 'background: #eff6ff; font-weight: bold;' : '';
+        const borderStyle = (idx === visibleCases.length - 1) ? 'border-bottom: 2px solid var(--border);' : 'border-bottom: 1px solid #e2e8f0;';
+        const dofStr = (c.dof > 9000 || c.dof <= 0) ? '∞' : `${c.dof.toFixed(0)} mm`;
+        const btnText = isActive ? '✓ Active in 3D' : 'View in 3D';
+        const btnBg = isActive ? 'background: #2563eb; color: #fff; border: 1px solid #1d4ed8;' : 'background: #f8fafc; color: #1e293b; border: 1px solid #cbd5e1;';
+
+        html += `
+          <tr style="cursor: pointer; ${borderStyle} ${bgStyle}" onclick="loadMatrixConfig('${prefix}', ${r.sw}, ${r.sh}, ${r.pSize.toFixed(2)}, ${r.pxw}, ${r.pxh}, ${c.wd}, ${c.fl})" onmouseover="if(!${isActive}) this.style.background='#f8fafc'" onmouseout="if(!${isActive}) this.style.background=''">
+            ${idx === 0 ? `<td rowspan="${visibleCases.length}" style="vertical-align: middle; border-bottom: 2px solid var(--border); font-weight: 600;">${r.fmtName}</td>` : ''}
+            ${idx === 0 ? `<td rowspan="${visibleCases.length}" style="vertical-align: middle; border-bottom: 2px solid var(--border); font-weight: 600;">${r.resMP} MP</td>` : ''}
+            ${idx === 0 ? `<td rowspan="${visibleCases.length}" style="vertical-align: middle; border-bottom: 2px solid var(--border);">${r.pSize.toFixed(2)} µm</td>` : ''}
+            <td style="font-weight: bold; color: ${c.color};">${c.label}</td>
+            <td>${c.fl}mm @ ${(c.wd/10).toFixed(0)}cm</td>
+            <td style="color: ${c.color}; font-weight: bold;">${c.den.toFixed(1)} px/mm</td>
+            <td>${(c.fovW/1000).toFixed(2)}m &times; ${(c.fovH/1000).toFixed(2)}m</td>
+            <td style="font-weight: 500;">${dofStr}</td>
+            <td style="font-weight: 600;">${c.cams}</td>
+            <td style="font-weight: bold;">$${c.cost.toLocaleString('en-US')}</td>
+            <td>${c.fit}</td>
+            <td><button onclick="event.stopPropagation(); loadMatrixConfig('${prefix}', ${r.sw}, ${r.sh}, ${r.pSize.toFixed(2)}, ${r.pxw}, ${r.pxh}, ${c.wd}, ${c.fl});" style="padding: 3px 8px; font-size: 10px; cursor: pointer; border-radius: 4px; ${btnBg} font-weight: 600;">${btnText}</button></td>
+          </tr>
+        `;
+      });
     });
     
-    tableBody.innerHTML = html;
+    tableBody.innerHTML = html || '<tr><td colspan="12" style="padding: 16px; color: #64748b;">No configurations match the selected filter criteria.</td></tr>';
 }
 
   window.loadMatrixConfig = function(prefix, sw, sh, pSize, pxw, pxh, wd, fl) {
@@ -964,7 +1027,13 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
       paramsDiv.textContent = 'Track: ' + Math.round(gantryRadiusX) + 'x' + Math.round(gantryRadiusY) + 'mm';
     }
     
-    const scale = Math.min((W - 30) / (gantryRadiusX * 2), (H - 30) / (gantryRadiusY * 2));
+    // Ensure the scale accommodates both the envelope and the camera orbit track
+    const maxRequiredX = Math.max(w_mm * 0.9, gantryRadiusX);
+    const maxRequiredY = Math.max(d_mm * 1.1, gantryRadiusY);
+    const scale = Math.min((W/2 - 20) / maxRequiredX, (H/2 - 20) / maxRequiredY);
+
+    const renderTrackX = gantryRadiusX * scale;
+    const renderTrackY = gantryRadiusY * scale;
     
     ctx.save();
     ctx.translate(W/2, H/2);
@@ -993,28 +1062,149 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
       
       // Draw Gantry Orbit ellipse
     ctx.beginPath();
-    ctx.ellipse(0, 0, gantryRadiusX * scale, gantryRadiusY * scale, 0, 0, 2 * Math.PI);
-    ctx.strokeStyle = '#e2e8f0';
+    ctx.ellipse(0, 0, renderTrackX, renderTrackY, 0, 0, 2 * Math.PI);
+    ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
     ctx.stroke();
     ctx.setLineDash([]);
     
-    // Camera positions (4 stops for now on ellipse)
-    const camAngles = [0, 90, 180, 270].map(deg => deg * Math.PI / 180);
-    ctx.fillStyle = '#64748b';
-    camAngles.forEach(a => {
-      const cx = gantryRadiusX * Math.sin(a) * scale;
-      const cy = -gantryRadiusY * Math.cos(a) * scale;
-      ctx.beginPath();
-      ctx.arc(cx, cy, 5, 0, 2 * Math.PI);
-      ctx.fill();
-    });
-    
-    // Draw Rectangular Envelope colored by cumulative density
-    // 4 edges: Top, Right, Bottom, Left
+    // Read selected angle dropdown value (0, 90, 180, 270 deg)
+    const angleSelectEl = document.getElementById(prefix ? prefix + 'graph-angle' : 'graph-angle');
+    const selectedAngleDeg = parseFloat(angleSelectEl ? angleSelectEl.value : "0") || 0;
+    const activeRad = selectedAngleDeg * Math.PI / 180;
+
+    // Calculate optical half-FOV angle in radians
+    const swEl = document.getElementById(prefix + 'sw') || document.getElementById('sw');
+    const sensorW = swEl ? parseFloat(swEl.value) : 36.0;
+    const mag = fl / (wd_mm - fl);
+    const fovW = sensorW / (mag || 0.001);
+    const halfFovRad = Math.atan((fovW / 2) / wd_mm) || 0.35;
+
+    // Architecture-specific camera positioning & active FOV cone angle
+    let activeCamRad = activeRad;
+    let trackCamAngles = [0, Math.PI/2, Math.PI, 3*Math.PI/2];
+
+    if (prefix === 'm2-') {
+      // Model 2: Dual columns at 0° (Front) and 180° (Back)
+      trackCamAngles = [0, Math.PI];
+      activeCamRad = (selectedAngleDeg === 180 || selectedAngleDeg === 270) ? Math.PI : 0;
+    } else if (prefix === 'm3-') {
+      // Model 3: Camera carriage at 0° (Front) facing patient
+      trackCamAngles = [0];
+      activeCamRad = 0;
+    }
+
+    // 1. Draw Rectangular Patient Envelope Box in center
     const rectHalfW = w_mm / 2;
     const rectHalfD = d_mm / 2;
+
+    ctx.fillStyle = 'rgba(241, 245, 249, 0.85)';
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.rect(-rectHalfW * scale, -rectHalfD * scale, rectHalfW * 2 * scale, rectHalfD * 2 * scale);
+    ctx.fill();
+    ctx.stroke();
+
+    // 2. Draw EXPANDING FOV BEAM CONTOUR FROM CAMERA LENS ACROSS ENVELOPE
+    const activeCx = (renderTrackX / scale) * Math.sin(activeCamRad);
+    const activeCy = -(renderTrackY / scale) * Math.cos(activeCamRad);
+
+    const aimAngle = Math.atan2(-activeCy, -activeCx);
+    const leftAngle = aimAngle - halfFovRad;
+    const rightAngle = aimAngle + halfFovRad;
+
+    // Draw FOV cone exactly to the back face depending on camera angle
+    let lx, ly, rx, ry;
+    const normRad = (activeCamRad % (2*Math.PI) + 2*Math.PI) % (2*Math.PI);
+    
+    if (normRad < 0.1 || normRad > 2*Math.PI - 0.1) {
+        // 0 deg: Front camera (aims +Y). Back face is +d_mm/2
+        const distY = (d_mm / 2) - activeCy;
+        lx = activeCx + Math.cos(leftAngle) * (distY / Math.sin(leftAngle));
+        ly = activeCy + Math.sin(leftAngle) * (distY / Math.sin(leftAngle));
+        rx = activeCx + Math.cos(rightAngle) * (distY / Math.sin(rightAngle));
+        ry = activeCy + Math.sin(rightAngle) * (distY / Math.sin(rightAngle));
+    } else if (Math.abs(normRad - Math.PI) < 0.1) {
+        // 180 deg: Back camera (aims -Y). Back face is -d_mm/2
+        const distY = (-d_mm / 2) - activeCy;
+        lx = activeCx + Math.cos(leftAngle) * (distY / Math.sin(leftAngle));
+        ly = activeCy + Math.sin(leftAngle) * (distY / Math.sin(leftAngle));
+        rx = activeCx + Math.cos(rightAngle) * (distY / Math.sin(rightAngle));
+        ry = activeCy + Math.sin(rightAngle) * (distY / Math.sin(rightAngle));
+    } else if (Math.abs(normRad - Math.PI/2) < 0.1) {
+        // 90 deg: Right camera (aims -X). Back face is -w_mm/2
+        const distX = (-w_mm / 2) - activeCx;
+        lx = activeCx + Math.cos(leftAngle) * (distX / Math.cos(leftAngle));
+        ly = activeCy + Math.sin(leftAngle) * (distX / Math.cos(leftAngle));
+        rx = activeCx + Math.cos(rightAngle) * (distX / Math.cos(rightAngle));
+        ry = activeCy + Math.sin(rightAngle) * (distX / Math.cos(rightAngle));
+    } else {
+        // 270 deg: Left camera (aims +X). Back face is +w_mm/2
+        const distX = (w_mm / 2) - activeCx;
+        lx = activeCx + Math.cos(leftAngle) * (distX / Math.cos(leftAngle));
+        ly = activeCy + Math.sin(leftAngle) * (distX / Math.cos(leftAngle));
+        rx = activeCx + Math.cos(rightAngle) * (distX / Math.cos(rightAngle));
+        ry = activeCy + Math.sin(rightAngle) * (distX / Math.cos(rightAngle));
+    }
+
+    // Draw Full Expanding FOV Beam Cone from Camera Lens
+    ctx.beginPath();
+    ctx.moveTo(activeCx * scale, activeCy * scale);
+    ctx.lineTo(lx * scale, ly * scale);
+    ctx.lineTo(rx * scale, ry * scale);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(59, 130, 246, 0.18)'; // Transparent blue FOV beam
+    ctx.fill();
+
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 3. Calculate resolution changes over distance (Front WD vs Back WD)
+    const nomPxMm = actualPxMm || targetPxMm;
+    const frontWd = wd_mm;
+    const backWd = wd_mm + d_mm;
+    const frontPxMm = nomPxMm * ((wd_mm - fl) / (frontWd - fl));
+    const backPxMm = nomPxMm * ((wd_mm - fl) / (backWd - fl));
+    const frontFovM = fovW / 1000;
+    const backFovM = (sensorW / (fl / (backWd - fl))) / 1000;
+
+    // Update map parameter HUD text above canvas
+    if (paramsDiv) {
+      paramsDiv.innerHTML = `FOV Front: <b>${frontFovM.toFixed(2)}m</b> (${frontPxMm.toFixed(1)} px/mm) ➔ Back: <b>${backFovM.toFixed(2)}m</b> (${backPxMm.toFixed(1)} px/mm)`;
+    }
+
+    // Center dimension label inside the envelope box with clean spacing
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`Patient Envelope (${(envW_m*100).toFixed(0)} × ${(envD_m*100).toFixed(0)} cm)`, 0, 0);
+
+    // 4. Draw subtle dimmed dots for all system camera positions on orbit
+    trackCamAngles.forEach(a => {
+      const cx = renderTrackX * Math.sin(a);
+      const cy = -renderTrackY * Math.cos(a);
+      ctx.beginPath();
+      ctx.arc(cx, cy, 4, 0, 2 * Math.PI);
+      ctx.fillStyle = '#94a3b8';
+      ctx.fill();
+    });
+
+    // 5. Highlight ACTIVE Camera Dot pointing to envelope overlap region
+    ctx.beginPath();
+    ctx.arc(activeCx * scale, activeCy * scale, 6.5, 0, 2 * Math.PI);
+    ctx.fillStyle = '#2563eb';
+    ctx.fill();
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 4 edges: Top, Right, Bottom, Left
     const edges = [
       { // Top (Back face)
         x1: -rectHalfW, y1: -rectHalfD, x2: rectHalfW, y2: -rectHalfD, nx: 0, ny: -1
@@ -1043,7 +1233,7 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
         const py2 = edge.y1 + (edge.y2 - edge.y1) * t2;
         
         let maxDensity = 0;
-        for (let a of camAngles) {
+        for (let a of trackCamAngles) {
           const cx = gantryRadiusX * Math.sin(a);
           const cy = -gantryRadiusY * Math.cos(a);
           
@@ -1079,10 +1269,10 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
     });
     
     ctx.restore();
-  }
+}
 
-  function render1DDensityGraph(prefix, actualPxMm, fl) {
-    const canvas = document.getElementById(prefix + 'density-graph-container');
+function render1DDensityGraph(prefix, actualPxMm, fl = 50) {
+    const canvas = document.getElementById(prefix + 'density-graph-container') || document.getElementById(prefix + 'density-graph');
     if (!canvas || !canvas.getContext) return;
     const ctx = canvas.getContext('2d');
     const W = canvas.width;
@@ -1091,7 +1281,7 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
 
     const envW_m = parseFloat((document.getElementById(prefix + 'patientEnvW') || {}).value) || 1.0;
     const envD_m = parseFloat((document.getElementById(prefix + 'patientEnvD') || {}).value) || 0.6;
-    const targetPxMmEl = document.getElementById(prefix + 'targetPxMm') || document.getElementById('targetPxMm');
+    const targetPxMmEl = document.getElementById(prefix + 'reqResBox') || document.getElementById(prefix + 'targetPxMm') || document.getElementById('reqResBox');
     const targetPxMm = targetPxMmEl ? parseFloat(targetPxMmEl.value) : 30;
     const wdEl = document.getElementById(prefix ? prefix + 'wdBox' : 'wdBox');
     const wd_mm = wdEl ? parseFloat(wdEl.value) : 800;
@@ -1278,19 +1468,19 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
           if (pixelSizeEl) pixelSizeEl.value = 3.45;
           if (pxwEl) pxwEl.value = 13376;
           if (pxhEl) pxhEl.value = 9528;
-        } else if (preset === 'IMX342') {
-          if (swEl) swEl.value = 31.8;
-          if (shEl) shEl.value = 23.8;
+        } else if (preset === 'IMX342' || preset === 'imx342') {
+          if (swEl) swEl.value = 22.3;
+          if (shEl) shEl.value = 16.7;
           if (pixelSizeEl) pixelSizeEl.value = 3.45;
-          if (pxwEl) pxwEl.value = 9576;
-          if (pxhEl) pxhEl.value = 6388;
-        } else if (preset === 'IMX455') {
+          if (pxwEl) pxwEl.value = 6464;
+          if (pxhEl) pxhEl.value = 4852;
+        } else if (preset === 'IMX455' || preset === 'imx455') {
           if (swEl) swEl.value = 36.0;
           if (shEl) shEl.value = 24.0;
           if (pixelSizeEl) pixelSizeEl.value = 3.76;
           if (pxwEl) pxwEl.value = 9568;
           if (pxhEl) pxhEl.value = 6380;
-        } else if (preset === 'IMX411') {
+        } else if (preset === 'IMX411' || preset === 'imx411') {
           if (swEl) swEl.value = 53.4;
           if (shEl) shEl.value = 40.0;
           if (pixelSizeEl) pixelSizeEl.value = 3.76;
@@ -1302,24 +1492,54 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
           if (pixelSizeEl) pixelSizeEl.value = 0.7;
           if (pxwEl) pxwEl.value = 9248;
           if (pxhEl) pxhEl.value = 6936;
-        } else if (preset === '100mp_ind') {
-          if (swEl) swEl.value = 25.5;
-          if (shEl) shEl.value = 19.1;
-          if (pixelSizeEl) pixelSizeEl.value = 2.2;
-          if (pxwEl) pxwEl.value = 11608;
-          if (pxhEl) pxhEl.value = 8708;
         } else if (preset === 'IMX927' || preset === 'imx927') {
-          if (swEl) swEl.value = 25.54;
-          if (shEl) shEl.value = 20.01;
-          if (pixelSizeEl) pixelSizeEl.value = 2.2;
-          if (pxwEl) pxwEl.value = 11608;
-          if (pxhEl) pxhEl.value = 9096;
-        } else if (preset === 'IMX571') {
+          if (swEl) swEl.value = 28.08;
+          if (shEl) shEl.value = 28.08;
+          if (pixelSizeEl) pixelSizeEl.value = 2.74;
+          if (pxwEl) pxwEl.value = 10248;
+          if (pxhEl) pxhEl.value = 10248;
+        } else if (preset === 'IMX571' || preset === 'imx571') {
           if (swEl) swEl.value = 23.5;
           if (shEl) shEl.value = 15.7;
           if (pixelSizeEl) pixelSizeEl.value = 3.76;
           if (pxwEl) pxwEl.value = 6244;
           if (pxhEl) pxhEl.value = 4168;
+        } else if (preset === 'gmax3265') {
+          if (swEl) swEl.value = 29.9;
+          if (shEl) shEl.value = 22.4;
+          if (pixelSizeEl) pixelSizeEl.value = 3.2;
+          if (pxwEl) pxwEl.value = 9344;
+          if (pxhEl) pxhEl.value = 7000;
+        } else if (preset === 'imx530') {
+          if (swEl) swEl.value = 14.6;
+          if (shEl) shEl.value = 12.62;
+          if (pixelSizeEl) pixelSizeEl.value = 2.74;
+          if (pxwEl) pxwEl.value = 5328;
+          if (pxhEl) pxhEl.value = 4608;
+        } else if (preset === 'imx541') {
+          if (swEl) swEl.value = 12.36;
+          if (shEl) shEl.value = 12.36;
+          if (pixelSizeEl) pixelSizeEl.value = 2.74;
+          if (pxwEl) pxwEl.value = 4512;
+          if (pxhEl) pxhEl.value = 4512;
+        } else if (preset === 'imx542') {
+          if (swEl) swEl.value = 14.60;
+          if (shEl) shEl.value = 8.33;
+          if (pixelSizeEl) pixelSizeEl.value = 2.74;
+          if (pxwEl) pxwEl.value = 5328;
+          if (pxhEl) pxhEl.value = 3040;
+        } else if (preset === 'mf50') {
+          if (swEl) swEl.value = 43.8;
+          if (shEl) shEl.value = 32.9;
+          if (pixelSizeEl) pixelSizeEl.value = 3.76;
+          if (pxwEl) pxwEl.value = 8256;
+          if (pxhEl) pxhEl.value = 6192;
+        } else if (preset === '5dmk4') {
+          if (swEl) swEl.value = 36.0;
+          if (shEl) shEl.value = 24.0;
+          if (pixelSizeEl) pixelSizeEl.value = 5.36;
+          if (pxwEl) pxwEl.value = 6720;
+          if (pxhEl) pxhEl.value = 4480;
         }
         calculate();
       });
@@ -1790,11 +2010,11 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
     const pCustom = parseFloat(document.getElementById(prefix + 'priceCustom')?.value || 6500);
 
     let activeUnitPrice = pCustom;
-    if (sensorPresetVal.includes("50mp") || sensorPresetVal.includes("mf50")) {
+    if (sensorPresetVal.includes("50mp") || sensorPresetVal.includes("mf50") || sensorPresetVal.includes("imx342") || sensorPresetVal.includes("imx530") || sensorPresetVal.includes("5dmk4")) {
       activeUnitPrice = p50;
-    } else if (sensorPresetVal.includes("64mp") || sensorPresetVal.includes("64 mp") || sensorPresetVal.includes("embedded")) {
+    } else if (sensorPresetVal.includes("64mp") || sensorPresetVal.includes("64 mp") || sensorPresetVal.includes("embedded") || sensorPresetVal.includes("gmax3265") || sensorPresetVal.includes("imx541") || sensorPresetVal.includes("imx542") || sensorPresetVal.includes("imx927")) {
       activeUnitPrice = p64;
-    } else if (sensorPresetVal.includes("100mp") || sensorPresetVal.includes("100 mp")) {
+    } else if (sensorPresetVal.includes("100mp") || sensorPresetVal.includes("100 mp") || sensorPresetVal.includes("imx455") || sensorPresetVal.includes("imx571")) {
       activeUnitPrice = p100;
     } else if (sensorPresetVal.includes("127mp") || sensorPresetVal.includes("imx661")) {
       activeUnitPrice = p127;
@@ -1805,10 +2025,10 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
     const priceInput = document.getElementById(prefix + 'cameraUnitPrice');
     if (priceInput) priceInput.value = activeUnitPrice;
 
-    // Calculate total camera cost and budget status
+    // Calculate total camera cost, budget utilization, and status
     const budgetInput = document.getElementById(prefix + 'maxCameraBudget');
     const unitPrice = activeUnitPrice;
-    const maxBudget = budgetInput ? (parseFloat(budgetInput.value) || 0) : 0;
+    const maxBudget = budgetInput ? (parseFloat(budgetInput.value) || 0) : 100000;
     
     let totalCamsNum = vertCamsNeeded;
     if (isModel3) {
@@ -1818,16 +2038,36 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
     }
     
     const totalCost = totalCamsNum * unitPrice;
+    const remainingBudget = maxBudget - totalCost;
+    const utilPct = maxBudget > 0 ? Math.min(999, (totalCost / maxBudget) * 100).toFixed(1) : 0;
     
     const costEl = document.getElementById(prefix ? prefix + 'totalCameraCost' : 'totalCameraCost');
     const budgetStatusEl = document.getElementById(prefix ? prefix + 'budgetStatus' : 'budgetStatus');
+    const budgetTargetEl = document.getElementById(prefix ? prefix + 'budgetTargetDisplay' : 'budgetTargetDisplay');
+    const budgetRemEl = document.getElementById(prefix ? prefix + 'budgetRemainingDisplay' : 'budgetRemainingDisplay');
+    const budgetUtilEl = document.getElementById(prefix ? prefix + 'budgetUtilDisplay' : 'budgetUtilDisplay');
+    const budgetBarEl = document.getElementById(prefix ? prefix + 'budgetProgressBar' : 'budgetProgressBar');
+
     if (costEl) costEl.textContent = totalCost.toLocaleString();
+    if (budgetTargetEl) budgetTargetEl.textContent = maxBudget.toLocaleString();
+    if (budgetRemEl) {
+      budgetRemEl.textContent = (remainingBudget >= 0 ? '$' : '-$') + Math.abs(remainingBudget).toLocaleString();
+      budgetRemEl.style.color = remainingBudget >= 0 ? '#10b981' : '#ef4444';
+    }
+    if (budgetUtilEl) budgetUtilEl.textContent = utilPct + '%';
+    
+    if (budgetBarEl) {
+      const barPct = Math.min(100, Math.max(0, parseFloat(utilPct)));
+      budgetBarEl.style.width = barPct + '%';
+      budgetBarEl.style.background = totalCost <= maxBudget ? '#10b981' : '#ef4444';
+    }
+
     if (budgetStatusEl) {
       if (totalCost <= maxBudget) {
-        budgetStatusEl.textContent = "WITHIN BUDGET";
+        budgetStatusEl.textContent = "PASS (Within Budget)";
         budgetStatusEl.className = "badge badge-pass";
       } else {
-        budgetStatusEl.textContent = "OVER BUDGET";
+        budgetStatusEl.textContent = "FAIL (Over Budget)";
         budgetStatusEl.className = "badge badge-fail";
       }
     }
@@ -1971,13 +2211,259 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
   var g3dScene, g3dCamera, g3dRenderer, g3dControls;
   var gantryGroup, mannequinGroup, headMesh, stationaryGroup;
   var g3dBoneLeftArm = null, g3dBoneRightArm = null, g3dBoneLeftLeg = null, g3dBoneRightLeg = null;
+  var g3dJointLeftArm = null, g3dJointRightArm = null, g3dJointLeftLeg = null, g3dJointRightLeg = null;
   var g3dMixer = null;
   var g3dClock = new THREE.Clock();
   var nathanModel = null;
   var dirLight, fillLight;
   var g3dSkinMaterials = [];
   window.g3dIlluminationMode = 'cross';
-  
+
+  function buildProceduralArticulatedMannequin() {
+    if (!mannequinGroup) return;
+    while (mannequinGroup.children.length > 0) {
+      mannequinGroup.remove(mannequinGroup.children[0]);
+    }
+
+    // Realistic human skin, hair, and apparel materials
+    const skinMat   = new THREE.MeshStandardMaterial({ color: 0xf3c5ab, roughness: 0.52, metalness: 0.0 });
+    const hairMat   = new THREE.MeshStandardMaterial({ color: 0x27272a, roughness: 0.85, metalness: 0.0 });
+    const shortsMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.65 });
+    const shoeMat   = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.6 });
+
+    const rootGroup = new THREE.Group();
+    rootGroup.position.set(0, 0, 0);
+
+    // --- REALISTIC TORSO & CHEST ---
+    const torsoGeo = new THREE.CylinderGeometry(0.185, 0.13, 0.54, 32);
+    const torsoMesh = new THREE.Mesh(torsoGeo, skinMat);
+    torsoMesh.position.set(0, 1.24, 0);
+    rootGroup.add(torsoMesh);
+
+    // Anatomical Pectoral Muscle Contours
+    const pecsL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), skinMat);
+    pecsL.scale.set(1.1, 0.7, 0.5);
+    pecsL.position.set(-0.07, 1.41, 0.08);
+    rootGroup.add(pecsL);
+
+    const pecsR = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), skinMat);
+    pecsR.scale.set(1.1, 0.7, 0.5);
+    pecsR.position.set(0.07, 1.41, 0.08);
+    rootGroup.add(pecsR);
+
+    // --- HIPS & MEDICAL APPAREL ---
+    const pelvisGeo = new THREE.CylinderGeometry(0.145, 0.132, 0.18, 32);
+    const pelvisMesh = new THREE.Mesh(pelvisGeo, shortsMat);
+    pelvisMesh.position.set(0, 0.88, 0);
+    rootGroup.add(pelvisMesh);
+
+    // --- NECK & REALISTIC HUMAN HEAD ---
+    const neckGeo = new THREE.CylinderGeometry(0.055, 0.065, 0.11, 24);
+    const neckMesh = new THREE.Mesh(neckGeo, skinMat);
+    neckMesh.position.set(0, 1.57, 0);
+    rootGroup.add(neckMesh);
+
+    // Cranium & Face
+    const headGeo = new THREE.SphereGeometry(0.108, 32, 32);
+    const headMesh = new THREE.Mesh(headGeo, skinMat);
+    headMesh.scale.set(0.95, 1.18, 0.95);
+    headMesh.position.set(0, 1.70, 0);
+    rootGroup.add(headMesh);
+
+    // Anatomical Hair Cap
+    const hairGeo = new THREE.SphereGeometry(0.111, 32, 32, 0, Math.PI * 2, 0, Math.PI / 1.7);
+    const hairMesh = new THREE.Mesh(hairGeo, hairMat);
+    hairMesh.position.set(0, 1.71, -0.005);
+    rootGroup.add(hairMesh);
+
+    // Nose Feature
+    const noseGeo = new THREE.ConeGeometry(0.016, 0.045, 16);
+    const noseMesh = new THREE.Mesh(noseGeo, skinMat);
+    noseMesh.rotation.x = Math.PI / 2;
+    noseMesh.position.set(0, 1.69, 0.108);
+    rootGroup.add(noseMesh);
+
+    // Ears
+    const earL = new THREE.Mesh(new THREE.SphereGeometry(0.022, 12, 12), skinMat);
+    earL.scale.set(0.4, 1.1, 0.7);
+    earL.position.set(-0.10, 1.70, 0.01);
+    rootGroup.add(earL);
+
+    const earR = new THREE.Mesh(new THREE.SphereGeometry(0.022, 12, 12), skinMat);
+    earR.scale.set(0.4, 1.1, 0.7);
+    earR.position.set(0.10, 1.70, 0.01);
+    rootGroup.add(earR);
+
+    // --- LEFT ARM (Shoulder Joint at x = -0.21, y = 1.48) ---
+    g3dJointLeftArm = new THREE.Group();
+    g3dJointLeftArm.position.set(-0.21, 1.48, 0);
+    rootGroup.add(g3dJointLeftArm);
+
+    // Deltoid Shoulder Muscle
+    const shoulderLMesh = new THREE.Mesh(new THREE.SphereGeometry(0.058, 24, 24), skinMat);
+    shoulderLMesh.scale.set(1.15, 1.2, 1.1);
+    g3dJointLeftArm.add(shoulderLMesh);
+
+    // Upper Arm (Biceps/Triceps)
+    const upperArmLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.038, 0.30, 24), skinMat);
+    upperArmLMesh.position.set(0, -0.15, 0);
+    g3dJointLeftArm.add(upperArmLMesh);
+
+    // Elbow Joint
+    const elbowLMesh = new THREE.Mesh(new THREE.SphereGeometry(0.038, 20, 20), skinMat);
+    elbowLMesh.position.set(0, -0.30, 0);
+    g3dJointLeftArm.add(elbowLMesh);
+
+    // Forearm
+    const forearmLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.037, 0.030, 0.28, 24), skinMat);
+    forearmLMesh.position.set(0, -0.44, 0);
+    g3dJointLeftArm.add(forearmLMesh);
+
+    // Realistic Hand & Palm
+    const handLMesh = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.08, 0.06), skinMat);
+    handLMesh.position.set(0, -0.62, 0);
+    g3dJointLeftArm.add(handLMesh);
+
+    // Thumb
+    const thumbL = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.006, 0.035, 12), skinMat);
+    thumbL.rotation.z = Math.PI / 4;
+    thumbL.position.set(0.015, -0.60, 0.02);
+    g3dJointLeftArm.add(thumbL);
+
+    // --- RIGHT ARM (Shoulder Joint at x = +0.21, y = 1.48) ---
+    g3dJointRightArm = new THREE.Group();
+    g3dJointRightArm.position.set(0.21, 1.48, 0);
+    rootGroup.add(g3dJointRightArm);
+
+    // Deltoid Shoulder Muscle
+    const shoulderRMesh = new THREE.Mesh(new THREE.SphereGeometry(0.058, 24, 24), skinMat);
+    shoulderRMesh.scale.set(1.15, 1.2, 1.1);
+    g3dJointRightArm.add(shoulderRMesh);
+
+    // Upper Arm (Biceps/Triceps)
+    const upperArmRMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.044, 0.038, 0.30, 24), skinMat);
+    upperArmRMesh.position.set(0, -0.15, 0);
+    g3dJointRightArm.add(upperArmRMesh);
+
+    // Elbow Joint
+    const elbowRMesh = new THREE.Mesh(new THREE.SphereGeometry(0.038, 20, 20), skinMat);
+    elbowRMesh.position.set(0, -0.30, 0);
+    g3dJointRightArm.add(elbowRMesh);
+
+    // Forearm
+    const forearmRMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.037, 0.030, 0.28, 24), skinMat);
+    forearmRMesh.position.set(0, -0.44, 0);
+    g3dJointRightArm.add(forearmRMesh);
+
+    // Realistic Hand & Palm
+    const handRMesh = new THREE.Mesh(new THREE.BoxGeometry(0.024, 0.08, 0.06), skinMat);
+    handRMesh.position.set(0, -0.62, 0);
+    g3dJointRightArm.add(handRMesh);
+
+    // Thumb
+    const thumbR = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.006, 0.035, 12), skinMat);
+    thumbR.rotation.z = -Math.PI / 4;
+    thumbR.position.set(-0.015, -0.60, 0.02);
+    g3dJointRightArm.add(thumbR);
+
+    // --- LEFT LEG (Hip Joint at x = -0.09, y = 0.80) ---
+    g3dJointLeftLeg = new THREE.Group();
+    g3dJointLeftLeg.position.set(-0.09, 0.80, 0);
+    rootGroup.add(g3dJointLeftLeg);
+
+    const hipLMesh = new THREE.Mesh(new THREE.SphereGeometry(0.058, 20, 20), skinMat);
+    g3dJointLeftLeg.add(hipLMesh);
+
+    // Quadriceps Thigh
+    const thighLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.064, 0.048, 0.40, 24), skinMat);
+    thighLMesh.position.set(0, -0.20, 0);
+    g3dJointLeftLeg.add(thighLMesh);
+
+    // Knee Cap Joint
+    const kneeLMesh = new THREE.Mesh(new THREE.SphereGeometry(0.048, 20, 20), skinMat);
+    kneeLMesh.position.set(0, -0.40, 0);
+    g3dJointLeftLeg.add(kneeLMesh);
+
+    // Calf Muscle
+    const calfLMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.038, 0.38, 24), skinMat);
+    calfLMesh.position.set(0, -0.59, 0);
+    g3dJointLeftLeg.add(calfLMesh);
+
+    // Foot / Shoe
+    const footLMesh = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.045, 0.19), shoeMat);
+    footLMesh.position.set(0, -0.79, 0.04);
+    g3dJointLeftLeg.add(footLMesh);
+
+    // --- RIGHT LEG (Hip Joint at x = +0.09, y = 0.80) ---
+    g3dJointRightLeg = new THREE.Group();
+    g3dJointRightLeg.position.set(0.09, 0.80, 0);
+    rootGroup.add(g3dJointRightLeg);
+
+    const hipRMesh = new THREE.Mesh(new THREE.SphereGeometry(0.058, 20, 20), skinMat);
+    g3dJointRightLeg.add(hipRMesh);
+
+    // Quadriceps Thigh
+    const thighRMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.064, 0.048, 0.40, 24), skinMat);
+    thighRMesh.position.set(0, -0.20, 0);
+    g3dJointRightLeg.add(thighRMesh);
+
+    // Knee Cap Joint
+    const kneeRMesh = new THREE.Mesh(new THREE.SphereGeometry(0.048, 20, 20), skinMat);
+    kneeRMesh.position.set(0, -0.40, 0);
+    g3dJointRightLeg.add(kneeRMesh);
+
+    // Calf Muscle
+    const calfRMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.046, 0.038, 0.38, 24), skinMat);
+    calfRMesh.position.set(0, -0.59, 0);
+    g3dJointRightLeg.add(calfRMesh);
+
+    // Foot / Shoe
+    const footRMesh = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.045, 0.19), shoeMat);
+    footRMesh.position.set(0, -0.79, 0.04);
+    g3dJointRightLeg.add(footRMesh);
+
+    mannequinGroup.add(rootGroup);
+
+    // Apply active pose immediately after building
+    if (typeof window.setPatient3DPose === 'function') {
+      window.setPatient3DPose(window.g3dActivePose || 'default');
+    }
+  }
+  window.buildProceduralArticulatedMannequin = buildProceduralArticulatedMannequin;
+
+  function setPatient3DPose(poseKey) {
+    const pKey = 'standard-a'; // Force relaxed pose as requested
+    window.g3dActivePose = pKey;
+
+    const armsLeft  = [g3dBoneLeftArm,  g3dJointLeftArm].filter(Boolean);
+    const armsRight = [g3dBoneRightArm, g3dJointRightArm].filter(Boolean);
+    const legsLeft  = [g3dBoneLeftLeg,  g3dJointLeftLeg].filter(Boolean);
+    const legsRight = [g3dBoneRightLeg, g3dJointRightLeg].filter(Boolean);
+
+    if (armsLeft.length === 0 || armsRight.length === 0) return;
+
+    // Relaxed Pose (Arms straight down, matching reference photo)
+    if (g3dBoneLeftArm) {
+        g3dBoneLeftArm.rotation.set(0, 0, -1.25); // Mixamo GLTF: rotate -1.25 rad to drop DOWN
+    }
+    if (g3dBoneRightArm) {
+        g3dBoneRightArm.rotation.set(0, 0, 1.25); // Mixamo GLTF: rotate +1.25 rad to drop DOWN
+    }
+    
+    if (g3dJointLeftArm) {
+        g3dJointLeftArm.rotation.set(0, 0, 0); // Procedural: bind pose is already straight down
+    }
+    if (g3dJointRightArm) {
+        g3dJointRightArm.rotation.set(0, 0, 0); // Procedural: bind pose is already straight down
+    }
+    legsLeft.forEach(leg => { leg.rotation.x = 0; leg.rotation.z = 0; });
+    legsRight.forEach(leg => { leg.rotation.x = 0; leg.rotation.z = 0; });
+    if (nathanModel) {
+      nathanModel.updateMatrixWorld(true);
+    }
+  }
+  window.setPatient3DPose = setPatient3DPose;
+
   function setupGantry3D() {
     g3dContainer = document.getElementById('canvas3d-three');
     if (!g3dContainer || g3dInitialized) return;
@@ -2070,7 +2556,10 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
     stationaryGroup = new THREE.Group();
     g3dScene.add(stationaryGroup);
 
-    // Decode and parse embedded realistic human body GLB model if available
+    // Build default procedural jointed mannequin
+    buildProceduralArticulatedMannequin();
+
+    // Decode and parse embedded realistic 3D rigged human body GLB model
     if (window.bodyModelGlbData) {
       try {
         const binaryString = atob(window.bodyModelGlbData);
@@ -2086,7 +2575,6 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
           arrayBuffer,
           '',
           function (gltf) {
-            // Remove mannequin group (the cylinders dummy)
             if (mannequinGroup) {
               while (mannequinGroup.children.length > 0) {
                 mannequinGroup.remove(mannequinGroup.children[0]);
@@ -2098,9 +2586,7 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
 
             const model = gltf.scene;
             model.traverse(child => {
-              console.log("GLTF node:", child.name, "| isBone:", child.isBone, "| type:", child.type);
-              if (child.isBone) {
-                console.log("Model bone detected:", child.name);
+              if (child.isBone || child.type === 'Bone') {
                 const nameL = child.name.toLowerCase();
                 if (nameL.includes('leftarm') || nameL.includes('arm_l') || nameL.includes('l_arm')) g3dBoneLeftArm = child;
                 if (nameL.includes('rightarm') || nameL.includes('arm_r') || nameL.includes('r_arm')) g3dBoneRightArm = child;
@@ -2109,14 +2595,17 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
               }
               if (child.isMesh || child.isSkinnedMesh) {
                 if (child.geometry) {
-                  if (child.geometry.attributes.normal) child.geometry.deleteAttribute('normal');
                   child.geometry.computeVertexNormals();
                 }
                 child.castShadow = false;
                 child.receiveShadow = false;
                 if (child.material) {
-                  child.material = new THREE.MeshLambertMaterial({
-                    color: 0xf4d3c4
+                  const isJoint = child.name && child.name.toLowerCase().includes('joint');
+                  child.material = new THREE.MeshStandardMaterial({
+                    color: isJoint ? 0x334155 : 0xe0a98b, // Realistic warm skin tone with dark joints/apparel
+                    roughness: 0.52,
+                    metalness: 0.0,
+                    skinning: true
                   });
                   if (!g3dSkinMaterials.includes(child.material)) {
                     g3dSkinMaterials.push(child.material);
@@ -2125,25 +2614,33 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
               }
             });
 
-            // Scale and position
-            const box = new THREE.Box3().setFromObject(model);
-            const size = new THREE.Vector3();
-            box.getSize(size);
-            const center = new THREE.Vector3();
-            box.getCenter(center);
+            // Force matrix update on initial model hierarchy before computing bounds
+            model.scale.set(1, 1, 1);
+            model.position.set(0, 0, 0);
+            model.updateMatrixWorld(true);
 
-            const targetHeight = 1.75;
-            const scaleFactor = targetHeight / (size.y || 1);
-          model.scale.multiplyScalar(scaleFactor);
-            model.position.set(
-              -center.x * scaleFactor,
-              0 - (box.min.y * scaleFactor),
-              -center.z * scaleFactor
-            );
+            let box = new THREE.Box3().setFromObject(model);
+            let size = new THREE.Vector3();
+            box.getSize(size);
+
+            // Mixamo Xbot GLB has native Armature scale (0.01) with bone height ~1.78m.
+            // If raw size.y is < 0.1, un-skinned geometry accessor returned unscaled units (multiply by 100)
+            let rawH = size.y || 1.78;
+            if (rawH < 0.1) rawH *= 100;
+            if (rawH > 50)  rawH /= 100;
+
+            // Target height: 95% of patient envelope height (1.90m for 2.0m envelope) so patient looks big & fills box perfectly
+            const envH = (typeof g3dPatH !== 'undefined' && g3dPatH > 0) ? g3dPatH : 2.0;
+            const targetH = envH * 0.95; // 1.90m
+            const scaleFactor = targetH / rawH; // ~1.067
+
+            model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+            model.position.set(0, 0, 0);
+            model.updateMatrixWorld(true);
 
             nathanModel = model;
             mannequinGroup.add(nathanModel);
-            console.log('Successfully loaded realistic patient body model from embedded Base64 data!');
+            console.log('Successfully loaded real 3D rigged Mixamo human mannequin model!');
             if (typeof window.setPatient3DPose === 'function') {
               const poseSel = document.getElementById('g3d-pose-select');
               window.setPatient3DPose(poseSel ? poseSel.value : 'default');
@@ -2158,54 +2655,7 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
       }
     }
 
-  window.setPatient3DPose = function(poseKey) {
-    window.g3dActivePose = poseKey || 'default';
-    if (!g3dBoneLeftArm && !g3dBoneRightArm && !nathanModel) return;
 
-    if (g3dBoneLeftArm && g3dBoneRightArm) {
-      if (poseKey === 'arms-forward') {
-        // Rotate arms forward (front/back pitch around X axis)
-        g3dBoneLeftArm.rotation.x = -Math.PI / 2.5; 
-        g3dBoneRightArm.rotation.x = -Math.PI / 2.5;
-        g3dBoneLeftArm.rotation.z = 0.2;
-        g3dBoneRightArm.rotation.z = -0.2;
-        if (g3dBoneLeftLeg) g3dBoneLeftLeg.rotation.x = 0;
-        if (g3dBoneRightLeg) g3dBoneRightLeg.rotation.x = 0;
-      } else if (poseKey === 'arms-up') {
-        // T-Pose / Abducted Arms
-        g3dBoneLeftArm.rotation.x = 0;
-        g3dBoneRightArm.rotation.x = 0;
-        g3dBoneLeftArm.rotation.z = Math.PI / 2.2;
-        g3dBoneRightArm.rotation.z = -Math.PI / 2.2;
-        if (g3dBoneLeftLeg) g3dBoneLeftLeg.rotation.x = 0;
-        if (g3dBoneRightLeg) g3dBoneRightLeg.rotation.x = 0;
-      } else if (poseKey === 'overhead') {
-        // Hands Overhead (Axilla pose)
-        g3dBoneLeftArm.rotation.x = 0;
-        g3dBoneRightArm.rotation.x = 0;
-        g3dBoneLeftArm.rotation.z = Math.PI * 0.85;
-        g3dBoneRightArm.rotation.z = -Math.PI * 0.85;
-        if (g3dBoneLeftLeg) g3dBoneLeftLeg.rotation.x = 0;
-        if (g3dBoneRightLeg) g3dBoneRightLeg.rotation.x = 0;
-      } else if (poseKey === 'step-forward') {
-        // Legs & Arms Step Forward / Back
-        g3dBoneLeftArm.rotation.x = Math.PI / 5;   // Left arm back
-        g3dBoneRightArm.rotation.x = -Math.PI / 5;  // Right arm forward
-        g3dBoneLeftArm.rotation.z = 0.3;
-        g3dBoneRightArm.rotation.z = -0.3;
-        if (g3dBoneLeftLeg) g3dBoneLeftLeg.rotation.x = -Math.PI / 7; // Left leg forward
-        if (g3dBoneRightLeg) g3dBoneRightLeg.rotation.x = Math.PI / 7;  // Right leg back
-      } else {
-        // Default Standard A-Pose
-        g3dBoneLeftArm.rotation.x = 0;
-        g3dBoneRightArm.rotation.x = 0;
-        g3dBoneLeftArm.rotation.z = 0.45;
-        g3dBoneRightArm.rotation.z = -0.45;
-        if (g3dBoneLeftLeg) g3dBoneLeftLeg.rotation.x = 0;
-        if (g3dBoneRightLeg) g3dBoneRightLeg.rotation.x = 0;
-      }
-    }
-  };
 
 
     // Build Gantry mechanicals
@@ -2753,14 +3203,15 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
                 railWrapper.add(camMesh);
                 
                 // Frustum lines (facing inwards to patient along -renderWd local Z)
-                const extendFov = document.getElementById('extendFovCheck') ? document.getElementById('extendFovCheck').checked : false;
+                const extendEl = document.getElementById('g3d-extend-fov') || document.getElementById('extendFovCheck');
+                const extendFov = extendEl ? extendEl.checked : false;
                 const frustumPoints = [];
                 let renderWd = g3dWD;
                 let renderFovHW = fovHW;
                 let renderFovVH = fovVH;
                 
                 if (extendFov) {
-                    renderWd = g3dWD + (g3dPatD / 2);
+                    renderWd = g3dWD + g3dPatD; // Extend fully across the envelope depth to the back face
                     const scale = renderWd / g3dWD;
                     renderFovHW = fovHW * scale;
                     renderFovVH = fovVH * scale;
@@ -2833,7 +3284,8 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
             camMesh.position.set(0, h, 0);
             colGroup.add(camMesh);
 
-            const extendFov = document.getElementById('extendFovCheck') ? document.getElementById('extendFovCheck').checked : false;
+            const extendEl = document.getElementById('g3d-extend-fov') || document.getElementById('extendFovCheck');
+            const extendFov = extendEl ? extendEl.checked : false;
 
             const frustumPoints = [];
             let renderWd = g3dWD;
@@ -2841,7 +3293,7 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
             let renderFovVH = fovVH;
             
             if (extendFov) {
-                renderWd = g3dWD + (g3dPatD / 2);
+                renderWd = g3dWD + g3dPatD; // Extend fully across the envelope depth to the back face
                 const scale = renderWd / g3dWD;
                 renderFovHW = fovHW * scale;
                 renderFovVH = fovVH * scale;
@@ -2888,13 +3340,26 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
     textSprite.position.set(0, rh + 0.25, 0);
     stationaryGroup.add(textSprite);
 
+    // Ensure procedural articulated mannequin is built and active
+    if ((!g3dJointLeftArm || mannequinGroup.children.length === 0) && typeof window.buildProceduralArticulatedMannequin === 'function') {
+      window.buildProceduralArticulatedMannequin();
+    }
+
     // Add physical turntable platform disc for Model 3 (patient turntable)
     if (isModel3) {
       const turntableGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.04, 32);
+      turntableGeo.name = 'turntableDisc';
       const turntableMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6, metalness: 0.3 });
       const turntableMesh = new THREE.Mesh(turntableGeo, turntableMat);
       turntableMesh.position.y = 0.02; // Sit slightly above floor grid
       mannequinGroup.add(turntableMesh);
+    }
+    
+    // Re-apply active joint pose (Supports Model 1, Model 2, and Model 3)
+    if (typeof window.setPatient3DPose === 'function') {
+      const poseSel = document.getElementById('g3d-pose-select');
+      const activePose = poseSel ? poseSel.value : (window.g3dActivePose || 'default');
+      window.setPatient3DPose(activePose);
     }
     
     {
@@ -2988,6 +3453,12 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
         sweepVal.textContent = suggestedStops;
       }
     }
+    
+    // Only show "Rotate Gantry instead of Patient" for Model 3
+    const rotateGantryEl = document.getElementById('m3-rotateGantryInstead');
+    if (rotateGantryEl && rotateGantryEl.closest('label')) {
+        rotateGantryEl.closest('label').style.display = (window.g3dArchitecture === 'model3') ? 'flex' : 'none';
+    }
   }
 
   function resizeGantry3D() {
@@ -3022,7 +3493,6 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
             }
             if (child.isMesh || child.isSkinnedMesh) {
                 if (child.geometry) {
-                  if (child.geometry.attributes.normal) child.geometry.deleteAttribute('normal');
                   child.geometry.computeVertexNormals();
                 }
                 child.castShadow = false;
@@ -3038,31 +3508,42 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
             }
           });
 
-          // Scale and position dynamically using bounding box metrics
-          const box = new THREE.Box3().setFromObject(model);
-          const size = new THREE.Vector3();
+          // Reset scale & position and update matrix world
+          model.scale.set(1, 1, 1);
+          model.position.set(0, 0, 0);
+          model.updateMatrixWorld(true);
+
+          let box = new THREE.Box3().setFromObject(model);
+          let size = new THREE.Vector3();
           box.getSize(size);
+
+          const envW = (typeof g3dPatW !== 'undefined' && g3dPatW > 0) ? g3dPatW : 1.0;
+          const envD = (typeof g3dPatD !== 'undefined' && g3dPatD > 0) ? g3dPatD : 0.6;
+          const envH = (typeof g3dPatH !== 'undefined' && g3dPatH > 0) ? g3dPatH : 2.0;
+
+          const maxAllowedW = envW * 0.85;
+          const maxAllowedD = envD * 0.85;
+          const maxAllowedH = envH * 0.85;
+
+          const scaleX = maxAllowedW / (size.x || 1.0);
+          const scaleY = maxAllowedH / (size.y || 1.8);
+          const scaleZ = maxAllowedD / (size.z || 0.4);
+
+          const scaleFactor = Math.min(scaleX, scaleY, scaleZ);
+
+          model.scale.set(scaleFactor, scaleFactor, scaleFactor);
+          model.updateMatrixWorld(true);
+
+          box = new THREE.Box3().setFromObject(model);
           const center = new THREE.Vector3();
           box.getCenter(center);
 
-          const targetHeight = 1.75; // Standard body model height (1.75m)
-          console.log("Xbot Bounding Box Size:", size);
-          let scaleFactor = 1.0;
-            if (size.y > 0.1 && size.y < 500) {
-                scaleFactor = targetHeight / size.y;
-                model.scale.multiplyScalar(scaleFactor);
-                model.position.set(
-                  -center.x * scaleFactor,
-                  0 - (box.min.y * scaleFactor),
-                  -center.z * scaleFactor
-                );
-            } else {
-                // Fallback for SkinnedMesh bounds failure (like Xbot)
-                // Mixamo Xbot is typically 1 unit = 1 meter or 100 units = 1 meter depending on export
-                // We'll set it to 1.0 (assuming it's already in meters due to GLTF scaling)
-                model.scale.set(0.01, 0.01, 0.01);
-                model.position.set(0, 0, 0);
-            }
+          model.position.set(
+            -center.x,
+            -box.min.y,
+            -center.z
+          );
+          model.updateMatrixWorld(true);
 
           nathanModel = model;
           mannequinGroup.add(nathanModel);
@@ -3155,7 +3636,6 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
                   }
                   if (child.isMesh || child.isSkinnedMesh) {
                 if (child.geometry) {
-                  if (child.geometry.attributes.normal) child.geometry.deleteAttribute('normal');
                   child.geometry.computeVertexNormals();
                 }
                 child.castShadow = false;
@@ -3419,21 +3899,25 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
     }, 500);
 
 
+  window.renderGantry3D = function() {
+    if (typeof rebuildGantryMechanicals === 'function') rebuildGantryMechanicals();
+  };
+
   window.simulateVerticalSweep = function(prefix) {
     if (window.g3dSweepInterval) clearInterval(window.g3dSweepInterval);
+    const wrappers = (window.m3RailWrappers && window.m3RailWrappers.length > 0) ? window.m3RailWrappers : (window.m3RailWrapper ? [window.m3RailWrapper] : []);
     
-    if (window.m3RailWrapper && g3dCamHeights && g3dCamHeights.length > 0) {
+    if (wrappers.length > 0 && g3dCamHeights && g3dCamHeights.length > 0) {
         let stepIndex = g3dCamHeights.length - 1; // start from top
-        
-        window.m3RailWrapper.position.y = g3dCamHeights[stepIndex];
+        wrappers.forEach(w => w.position.y = g3dCamHeights[stepIndex]);
         
         window.g3dSweepInterval = setInterval(() => {
             stepIndex--;
             if (stepIndex < 0) {
                 clearInterval(window.g3dSweepInterval);
-                window.m3RailWrapper.position.y = g3dCamHeights[g3dCamHeights.length - 1]; // reset
+                wrappers.forEach(w => w.position.y = g3dCamHeights[g3dCamHeights.length - 1]); // reset
             } else {
-                window.m3RailWrapper.position.y = g3dCamHeights[stepIndex];
+                wrappers.forEach(w => w.position.y = g3dCamHeights[stepIndex]);
             }
         }, 800);
     }
@@ -3441,9 +3925,9 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
 
   window.moveGantryDownOneStep = function(prefix) {
     if (window.g3dSweepInterval) clearInterval(window.g3dSweepInterval);
-    if (window.m3RailWrapper && g3dCamHeights && g3dCamHeights.length > 0) {
-        // find current height index roughly
-        let currentY = window.m3RailWrapper.position.y;
+    const wrappers = (window.m3RailWrappers && window.m3RailWrappers.length > 0) ? window.m3RailWrappers : (window.m3RailWrapper ? [window.m3RailWrapper] : []);
+    if (wrappers.length > 0 && g3dCamHeights && g3dCamHeights.length > 0) {
+        let currentY = wrappers[0].position.y;
         let nextIndex = g3dCamHeights.length - 1;
         for (let i = g3dCamHeights.length - 1; i >= 0; i--) {
             if (g3dCamHeights[i] < currentY - 0.05) {
@@ -3451,6 +3935,6 @@ function renderTopDownDensityMap(prefix, actualPxMm, fl = 50) {
                 break;
             }
         }
-        window.m3RailWrapper.position.y = g3dCamHeights[nextIndex];
+        wrappers.forEach(w => w.position.y = g3dCamHeights[nextIndex]);
     }
   };

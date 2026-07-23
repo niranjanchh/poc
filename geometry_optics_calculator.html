@@ -20,7 +20,7 @@
     document.head.appendChild(script);
   })();
 </script>
-<script src="body_model_data.js"></script>
+<script src="xbot_model_data.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
@@ -109,9 +109,9 @@
   <div class="tabs" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
     <div>
       <button class="tab-btn active" id="btn-rfq" onclick="switchTab('rfq-tab')">RFQ Subsystem Constraints</button>
-      <button class="tab-btn" id="btn-calc" onclick="switchTab('calculator-tab')">Single Column Gantry (Option A)</button>
-      <button class="tab-btn" id="btn-model2" onclick="switchTab('model2-tab')">Dual Column Gantry (Model 2)</button>
-      <button class="tab-btn" id="btn-model3" onclick="switchTab('model3-tab')">Vertical Scanning Array (Model 3)</button>
+      <button class="tab-btn" id="btn-calc" onclick="switchTab('calculator-tab')">Model 1: Single Column (3D Photo)</button>
+      <button class="tab-btn" id="btn-model2" onclick="switchTab('model2-tab')">Model 2: Dual Column (2D Photo)</button>
+      <button class="tab-btn" id="btn-model3" onclick="switchTab('model3-tab')">Model 3: Vertical Scan (2D Photo)</button>
     </div>
     <div style="display: flex; gap: 8px; margin-left: auto;">
       <button id="btn-reload-disk" class="tab-btn" style="background: #ef4444; color: white; border: none;" onclick="reloadFromDiskFile()">🔄 Reload from Disk File</button>
@@ -911,15 +911,11 @@
           <div class="control-group">
             <label>Sensor Preset</label>
             <select id="sensorPreset">
-              <option value="imx661" selected>Sony IMX661 (127MP, 3.45µm - Large Format)</option>
-              <option value="mf50">Generic 50MP (50MP, 3.76µm - Medium Format)</option>
-              <option value="gmax3265">GMAX3265 (65MP, 3.2µm - Medium Format)</option>
-              <option value="5dmk4">Canon 5D Mk IV (30.1MP, 5.36µm - Full Frame)</option>
-              <option value="imx530">Sony IMX530 (24.5MP, 2.74µm - 1.2" Industrial)</option>
-              <option value="imx541">Sony IMX541 (20.3MP, 2.74µm - 1.1" Industrial)</option>
-              <option value="imx542">Sony IMX542 (16.1MP, 3.45µm - 1.1" Industrial)</option>
-              <option value="64mp_mobile">64 MP Embedded (1/2", 0.7µm)</option>
-              <option value="imx927">Sony IMX927/IMX937 (105.5MP, 2.2µm - 2.5" format)</option>
+              <option value="IMX455">Sony IMX455 (61.0 MP, 3.76 µm - Full Frame 36.0×24.0mm)</option>
+              <option value="gmax3265">Gpixel GMAX3265 (65.4 MP, 3.20 µm - APS-H 29.9×22.4mm)</option>
+              <option value="imx927">Sony IMX927 / IMX937 (105.0 MP, 2.74 µm - Type 2.5" Square 28.08×28.08mm)</option>
+              <option value="imx661" selected>Sony IMX661 (127.7 MP, 3.45 µm - 3.6" Large Format 46.15×32.87mm)</option>
+              <option value="IMX411">Sony IMX411 (151.0 MP, 3.76 µm - Medium Format 53.4×40.0mm)</option>
               <option value="custom">Custom Configuration</option>
             </select>
           </div>
@@ -952,10 +948,24 @@
         </div>
         
         <div class="section">
-          <h2>💰 Camera Price &amp; Budget Config</h2>
+          <h2>💰 Configurable Target Budget &amp; Pricing</h2>
           <div class="control-group">
-            <label>Max Camera Budget ($)</label>
-            <input type="number" id="maxCameraBudget" value="50000" step="1000" style="width: 100%;">
+            <label>Target System / Camera Budget ($)</label>
+            <div class="input-row">
+              <input type="range" id="maxCameraBudgetSlider" min="10000" max="500000" step="5000" value="100000">
+              <input type="number" id="maxCameraBudget" value="100000" step="5000">
+            </div>
+            <div style="display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap;">
+              <button type="button" onclick="setQuickBudget('', 50000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; font-weight: 500;">$50k</button>
+              <button type="button" onclick="setQuickBudget('', 100000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; font-weight: 500;">$100k</button>
+              <button type="button" onclick="setQuickBudget('', 150000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; font-weight: 500;">$150k</button>
+              <button type="button" onclick="setQuickBudget('', 180000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #3b82f6; border-radius: 4px; background: #eff6ff; color: #1d4ed8; font-weight: 600;">$180k (RFQ Target)</button>
+              <button type="button" onclick="setQuickBudget('', 250000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; font-weight: 500;">$250k</button>
+            </div>
+          </div>
+          <!-- Live Budget Utilization Progress Bar -->
+          <div style="margin-bottom: 12px; background: #e2e8f0; border-radius: 6px; height: 10px; overflow: hidden; position: relative;" title="Live Budget Utilization">
+            <div id="budgetProgressBar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.3s ease;"></div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
             <div>
@@ -969,7 +979,7 @@
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
             <div>
-              <label>100MP Price ($)</label>
+              <label>105MP Price ($)</label>
               <input type="number" id="price100" value="8000" step="100" style="width: 100%;">
             </div>
             <div>
@@ -1053,7 +1063,7 @@
       <!-- MIDDLE PANEL: 3D Simulator + Optimization Table -->
       <div class="panel" style="gap: 16px; min-width: 0;">
         <div class="preview-panel" style="padding: 16px; min-height: auto; align-items: stretch;">
-          <h2 id="g3d-title" style="text-align: left; width: 100%;">3D Interactive Gantry Simulator (Option A: Rotating Column)</h2>
+          <h2 id="g3d-title" style="text-align: left; width: 100%;">3D Interactive Gantry Simulator (Model 1: 3D Photography)</h2>
           <div id="g3d-visualizer-placeholder-tab2" style="width: 100%; height: 500px; margin-bottom: 12px; position: relative; flex-shrink: 0;">
             <!-- g3d-visualizer-wrapper is appended here by default and moved to Tab3 placeholder when needed -->
             <div id="g3d-visualizer-wrapper" style="position: relative; width: 100%; height: 100%;">
@@ -1063,18 +1073,6 @@
                 <div style="font-size: 10px; font-weight: 700; color: #475569; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">💡 Illumination Mode</div>
                 <button id="btn-light-cross" class="light-toggle-btn active" onclick="window.setG3DLightingMode('cross')">Cross-Polarized Light</button>
                 <button id="btn-light-none" class="light-toggle-btn" onclick="window.setG3DLightingMode('none')">No Polarized Light</button>
-              </div>
-              
-              <!-- Floating Patient 3D Joint Pose Control -->
-              <div id="g3d-pose-toggle-container" style="position: absolute; top: 12px; left: 12px; z-index: 20; display: flex; flex-direction: column; gap: 4px; background: rgba(255, 255, 255, 0.96); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); box-shadow: 0 4px 12px rgba(0,0,0,0.12); width: 210px; box-sizing: border-box;">
-                <div style="font-size: 10px; font-weight: 700; color: #475569; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); padding-bottom: 4px;">🧍 Patient Joint Pose</div>
-                <select id="g3d-pose-select" onchange="if(typeof window.setPatient3DPose === 'function') window.setPatient3DPose(this.value)" style="width: 100%; font-size: 11px; padding: 4px 6px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; font-weight: 600; color: #1e293b; cursor: pointer;">
-                  <option value="default">Standard A-Pose</option>
-                  <option value="arms-forward">Hands Forward (Front/Back Arms)</option>
-                  <option value="arms-up">T-Pose / Abducted Arms</option>
-                  <option value="overhead">Hands Overhead (Axilla Pose)</option>
-                  <option value="step-forward">Legs & Arms Step Forward</option>
-                </select>
               </div>
               
               <!-- Floating Zoom Controls -->
@@ -1091,6 +1089,10 @@
 <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #475569; margin-top: 4px; cursor: pointer; justify-content: center; background: #f1f5f9; padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1;">
   <input type="checkbox" id="g3d-extend-fov" onchange="if(typeof renderGantry3D === 'function') renderGantry3D()" />
   Extend FOV to Envelope
+</label>
+<label style="display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #475569; margin-top: 4px; cursor: pointer; justify-content: center; background: #f1f5f9; padding: 6px; border-radius: 4px; border: 1px solid #cbd5e1;">
+  <input type="checkbox" id="m3-rotateGantryInstead" onchange="if(typeof calculate === 'function') calculate()">
+  🔄 Rotate Gantry instead of Patient
 </label>
                 <div style="display: flex; flex-direction: column; gap: 4px; font-size: 10.5px; font-weight: 700; padding: 6px; background: #f1f5f9; border-radius: 4px; border: 1px solid var(--border); text-align: left; box-sizing: border-box; width: 100%;">
                   <div style="display: flex; justify-content: space-between; gap: 4px;">
@@ -1121,7 +1123,7 @@
           <div class="section">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <h2 style="margin: 0; font-size: 15px; color: #1e293b; font-weight: 700;">📊 Coverage Heatmap & Density Profile</h2>
-            <select id="graph-angle" style="padding: 5px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 5px; background: white; cursor: pointer;" onchange="if(typeof render1DDensityGraph === 'function') render1DDensityGraph('')">
+            <select id="graph-angle" style="padding: 5px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 5px; background: white; cursor: pointer;" onchange="if(typeof render1DDensityGraph === 'function') render1DDensityGraph(''); if(typeof renderTopDownDensityMap === 'function') renderTopDownDensityMap('');">
               <option value="0">0° — Front (Width face)</option>
               <option value="90">90° — Side (Depth face)</option>
               <option value="180">180° — Back (Width face)</option>
@@ -1167,21 +1169,37 @@
 
         <!-- Working Distance Matrix -->
         <div class="section" style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
               <h2 style="margin: 0;">Dynamic Sensor Evaluation Matrix (2-4µm, Target: 30 px/mm)</h2>
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <label style="font-size: 11px; font-weight: 600; color: #475569;">Filter:</label>
+                <select id="matrix-filter-budget" onchange="populateOptimizationMatrix('')" style="padding: 3px 6px; font-size: 11px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; font-weight: 500;">
+                  <option value="all">All Budget Statuses</option>
+                  <option value="pass">Within Budget Only (Pass)</option>
+                </select>
+                <select id="matrix-filter-mp" onchange="populateOptimizationMatrix('')" style="padding: 3px 6px; font-size: 11px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; font-weight: 500;">
+                  <option value="all">All Resolutions</option>
+                  <option value="50">50 MP Only</option>
+                  <option value="64">64 MP Only</option>
+                  <option value="100">100 MP Only</option>
+                  <option value="127">127 MP Only</option>
+                  <option value="150">150 MP Only</option>
+                </select>
+              </div>
             </div>
             <div style="overflow-x: auto;">
               <table class="data-table" id="matrix-table" style="width: 100%; text-align: center;">
                 <thead>
                   <tr>
-                    <th>Sensor</th>
                     <th>Format</th>
+                    <th>Sensor</th>
                     <th>Pixel Size</th>
-                    <th>Case</th>
-                    <th>Lens & WD</th>
+                    <th>Optimization Case</th>
+                    <th>Lens &amp; WD</th>
                     <th>Density</th>
                     <th>Max FOV</th>
-                    <th>Vertical Cams</th>
+                    <th>DoF (Depth)</th>
+                    <th>Total Cameras</th>
                     <th>Total Cost</th>
                     <th>Budget Fit</th>
                     <th>Action</th>
@@ -1306,11 +1324,23 @@
                 <td><span id="motorTotalTravelVal" style="font-weight:600;">--</span> mm</td>
               </tr>
               <tr>
-                <td>Total Camera Cost</td>
+                <td>Configurable Target Budget</td>
+                <td>$<span id="budgetTargetDisplay" style="font-weight:600;">100,000</span></td>
+              </tr>
+              <tr>
+                <td>Total Camera / System Cost</td>
                 <td>$<span id="totalCameraCost" style="font-weight:600;">--</span></td>
               </tr>
               <tr>
-                <td>Budget Status</td>
+                <td>Budget Balance / Remaining</td>
+                <td><span id="budgetRemainingDisplay" style="font-weight:600;">--</span></td>
+              </tr>
+              <tr>
+                <td>Budget Utilization</td>
+                <td><span id="budgetUtilDisplay" style="font-weight:600;">--</span></td>
+              </tr>
+              <tr>
+                <td>Budget Compliance Status</td>
                 <td><span id="budgetStatus" class="badge">--</span></td>
               </tr>
             </tbody>
@@ -1390,13 +1420,11 @@
           <div class="control-group">
             <label>Sensor Preset</label>
             <select id="m2-sensorPreset" style="width:100%;">
-              <option value="IMX661">Sony IMX661 (127MP, 3.45µm - Large Format)</option>
-              <option value="IMX342" selected>Sony IMX342 (47.5MP, 3.45µm)</option>
-              <option value="IMX455">Sony IMX455 (61MP, 3.76µm)</option>
-              <option value="IMX411">Sony IMX411 (150MP, 3.76µm)</option>
-              <option value="IMX571">Sony IMX571 (26MP, 3.76µm)</option>
-              <option value="64mp_mobile">64 MP Embedded (1/2", 0.7µm)</option>
-              <option value="100mp_ind">100 MP Industrial (APS-C, 2.2µm)</option>
+              <option value="IMX455" selected>Sony IMX455 (61.0 MP, 3.76 µm - Full Frame 36.0×24.0mm)</option>
+              <option value="gmax3265">Gpixel GMAX3265 (65.4 MP, 3.20 µm - APS-H 29.9×22.4mm)</option>
+              <option value="imx927">Sony IMX927 / IMX937 (105.0 MP, 2.74 µm - Type 2.5" Square 28.08×28.08mm)</option>
+              <option value="IMX661">Sony IMX661 (127.7 MP, 3.45 µm - 3.6" Large Format 46.15×32.87mm)</option>
+              <option value="IMX411">Sony IMX411 (151.0 MP, 3.76 µm - Medium Format 53.4×40.0mm)</option>
               <option value="custom">Custom Configuration</option>
             </select>
           </div>
@@ -1429,10 +1457,24 @@
         </div>
         
         <div class="section">
-          <h2>💰 Camera Price &amp; Budget Config</h2>
+          <h2>💰 Configurable Target Budget &amp; Pricing</h2>
           <div class="control-group">
-            <label>Max Camera Budget ($)</label>
-            <input type="number" id="m2-maxCameraBudget" value="50000" step="1000" style="width: 100%;">
+            <label>Target System / Camera Budget ($)</label>
+            <div class="input-row">
+              <input type="range" id="m2-maxCameraBudgetSlider" min="10000" max="500000" step="5000" value="100000">
+              <input type="number" id="m2-maxCameraBudget" value="100000" step="5000">
+            </div>
+            <div style="display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap;">
+              <button type="button" onclick="setQuickBudget('m2-', 50000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; font-weight: 500;">$50k</button>
+              <button type="button" onclick="setQuickBudget('m2-', 100000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; font-weight: 500;">$100k</button>
+              <button type="button" onclick="setQuickBudget('m2-', 150000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; font-weight: 500;">$150k</button>
+              <button type="button" onclick="setQuickBudget('m2-', 180000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #3b82f6; border-radius: 4px; background: #eff6ff; color: #1d4ed8; font-weight: 600;">$180k (RFQ Target)</button>
+              <button type="button" onclick="setQuickBudget('m2-', 250000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; font-weight: 500;">$250k</button>
+            </div>
+          </div>
+          <!-- Live Budget Utilization Progress Bar -->
+          <div style="margin-bottom: 12px; background: #e2e8f0; border-radius: 6px; height: 10px; overflow: hidden; position: relative;" title="Live Budget Utilization">
+            <div id="m2-budgetProgressBar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.3s ease;"></div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
             <div>
@@ -1446,7 +1488,7 @@
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
             <div>
-              <label>100MP Price ($)</label>
+              <label>105MP Price ($)</label>
               <input type="number" id="m2-price100" value="8000" step="100" style="width: 100%;">
             </div>
             <div>
@@ -1525,7 +1567,7 @@
       <div class="panel" style="gap: 16px; min-width: 0;">
         <!-- 3D Visualizer -->
         <div class="preview-panel" style="padding: 16px; min-height: auto; align-items: stretch;">
-          <h2 id="m2-g3d-title" style="text-align: left; width: 100%;">3D Interactive Gantry Simulator (Model 2: Side-by-Side Dual Column)</h2>
+          <h2 id="m2-g3d-title" style="text-align: left; width: 100%;">3D Interactive Gantry Simulator (Model 2: 2D Photography)</h2>
           <div id="g3d-visualizer-placeholder-tab3" style="width: 100%; height: 500px; margin-bottom: 12px; flex-shrink: 0;">
             <!-- Shared g3d-visualizer-wrapper will be dynamically appended here when Tab 3 is active -->
           </div>
@@ -1533,24 +1575,37 @@
 
         <!-- Working Distance Matrix -->
         <div class="section" style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
               <h2 style="margin: 0;">Dynamic Sensor Evaluation Matrix (2-4µm, Target: 30 px/mm)</h2>
-              <select id="m2-matrix-sort" onchange="calculate()" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border); font-size: 13px; outline: none; cursor: pointer; display: none;">
-                <option value="wd">Sort by: WD</option>
-              </select>
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <label style="font-size: 11px; font-weight: 600; color: #475569;">Filter:</label>
+                <select id="m2-matrix-filter-budget" onchange="populateOptimizationMatrix('m2-')" style="padding: 3px 6px; font-size: 11px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; font-weight: 500;">
+                  <option value="all">All Budget Statuses</option>
+                  <option value="pass">Within Budget Only (Pass)</option>
+                </select>
+                <select id="m2-matrix-filter-mp" onchange="populateOptimizationMatrix('m2-')" style="padding: 3px 6px; font-size: 11px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; font-weight: 500;">
+                  <option value="all">All Resolutions</option>
+                  <option value="50">50 MP Only</option>
+                  <option value="64">64 MP Only</option>
+                  <option value="100">100 MP Only</option>
+                  <option value="127">127 MP Only</option>
+                  <option value="150">150 MP Only</option>
+                </select>
+              </div>
             </div>
             <div style="overflow-x: auto;">
               <table class="data-table" id="m2-matrix-table" style="width: 100%; text-align: center;">
                 <thead>
                   <tr>
-                    <th>Sensor</th>
                     <th>Format</th>
+                    <th>Sensor</th>
                     <th>Pixel Size</th>
-                    <th>Case</th>
-                    <th>Lens & WD</th>
+                    <th>Optimization Case</th>
+                    <th>Lens &amp; WD</th>
                     <th>Density</th>
                     <th>Max FOV</th>
-                    <th>Vertical Cams<br>(per col)</th>
+                    <th>DoF (Depth)</th>
+                    <th>Total Cameras</th>
                     <th>Total Cost</th>
                     <th>Budget Fit</th>
                     <th>Action</th>
@@ -1559,8 +1614,8 @@
               <tbody id="m2-matrix-body">
                 <!-- Dynamically populated -->
               </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
           <div class="analysis-text" style="margin-top: 8px;">
             💡 <i>This matrix recalculates standard lens options and clearances for each working distance to achieve compliance with the target pixel pitch.</i>
           </div>
@@ -1572,7 +1627,7 @@
           <div class="section">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <h2 style="margin: 0; font-size: 15px; color: #1e293b; font-weight: 700;">📊 Coverage Heatmap & Density Profile</h2>
-            <select id="m2-graph-angle" style="padding: 5px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 5px; background: white; cursor: pointer;" onchange="if(typeof render1DDensityGraph === 'function') render1DDensityGraph('m2-')">
+            <select id="m2-graph-angle" style="padding: 5px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 5px; background: white; cursor: pointer;" onchange="if(typeof render1DDensityGraph === 'function') render1DDensityGraph('m2-'); if(typeof renderTopDownDensityMap === 'function') renderTopDownDensityMap('m2-');">
               <option value="0">0° — Front (Width face)</option>
               <option value="90">90° — Side (Depth face)</option>
               <option value="180">180° — Back (Width face)</option>
@@ -1706,8 +1761,11 @@
               <tr><td>Discrete Sweep Positions</td><td>4 stops</td></tr>
               <tr><td>Total Captured Images</td><td><span id="m2-totalCapturedImages" style="font-weight:600;">--</span></td></tr>
               <tr><td>Total Session Time (4 Stops)</td><td><span id="m2-totalSessionTime" style="font-weight:600; color:var(--accent);">--</span> s</td></tr>
-              <tr><td>Total Camera Cost</td><td>$<span id="m2-totalCameraCost" style="font-weight:600;">--</span></td></tr>
-              <tr><td>Budget Status</td><td><span id="m2-budgetStatus" class="badge">--</span></td></tr>
+              <tr><td>Configurable Target Budget</td><td>$<span id="m2-budgetTargetDisplay" style="font-weight:600;">100,000</span></td></tr>
+              <tr><td>Total Camera / System Cost</td><td>$<span id="m2-totalCameraCost" style="font-weight:600;">--</span></td></tr>
+              <tr><td>Budget Balance / Remaining</td><td><span id="m2-budgetRemainingDisplay" style="font-weight:600;">--</span></td></tr>
+              <tr><td>Budget Utilization</td><td><span id="m2-budgetUtilDisplay" style="font-weight:600;">--</span></td></tr>
+              <tr><td>Budget Compliance Status</td><td><span id="m2-budgetStatus" class="badge">--</span></td></tr>
             </tbody>
           </table>
           <div class="explanation-box" id="m2-motorExplanation" style="display: none;">--</div>
@@ -1780,13 +1838,11 @@
           <div class="control-group">
             <label>Sensor Preset</label>
             <select id="m3-sensorPreset" style="width:100%;">
-              <option value="IMX661">Sony IMX661 (127MP, 3.45µm - Large Format)</option>
-              <option value="IMX342" selected>Sony IMX342 (47.5MP, 3.45µm)</option>
-              <option value="IMX455">Sony IMX455 (61MP, 3.76µm)</option>
-              <option value="IMX411">Sony IMX411 (150MP, 3.76µm)</option>
-              <option value="IMX571">Sony IMX571 (26MP, 3.76µm)</option>
-              <option value="64mp_mobile">64 MP Embedded (1/2", 0.7µm)</option>
-              <option value="100mp_ind">100 MP Industrial (APS-C, 2.2µm)</option>
+              <option value="IMX455" selected>Sony IMX455 (61.0 MP, 3.76 µm - Full Frame 36.0×24.0mm)</option>
+              <option value="gmax3265">Gpixel GMAX3265 (65.4 MP, 3.20 µm - APS-H 29.9×22.4mm)</option>
+              <option value="imx927">Sony IMX927 / IMX937 (105.0 MP, 2.74 µm - Type 2.5" Square 28.08×28.08mm)</option>
+              <option value="IMX661">Sony IMX661 (127.7 MP, 3.45 µm - 3.6" Large Format 46.15×32.87mm)</option>
+              <option value="IMX411">Sony IMX411 (151.0 MP, 3.76 µm - Medium Format 53.4×40.0mm)</option>
               <option value="custom">Custom Configuration</option>
             </select>
           </div>
@@ -1819,10 +1875,24 @@
         </div>
         
         <div class="section">
-          <h2>💰 Camera Price &amp; Budget Config</h2>
+          <h2>💰 Configurable Target Budget &amp; Pricing</h2>
           <div class="control-group">
-            <label>Max Camera Budget ($)</label>
-            <input type="number" id="m3-maxCameraBudget" value="50000" step="1000" style="width: 100%;">
+            <label>Target System / Camera Budget ($)</label>
+            <div class="input-row">
+              <input type="range" id="m3-maxCameraBudgetSlider" min="10000" max="500000" step="5000" value="100000">
+              <input type="number" id="m3-maxCameraBudget" value="100000" step="5000">
+            </div>
+            <div style="display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap;">
+              <button type="button" onclick="setQuickBudget('m3-', 50000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; font-weight: 500;">$50k</button>
+              <button type="button" onclick="setQuickBudget('m3-', 100000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; font-weight: 500;">$100k</button>
+              <button type="button" onclick="setQuickBudget('m3-', 150000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; font-weight: 500;">$150k</button>
+              <button type="button" onclick="setQuickBudget('m3-', 180000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #3b82f6; border-radius: 4px; background: #eff6ff; color: #1d4ed8; font-weight: 600;">$180k (RFQ Target)</button>
+              <button type="button" onclick="setQuickBudget('m3-', 250000)" style="padding: 3px 8px; font-size: 11px; cursor: pointer; border: 1px solid #cbd5e1; border-radius: 4px; background: #f8fafc; font-weight: 500;">$250k</button>
+            </div>
+          </div>
+          <!-- Live Budget Utilization Progress Bar -->
+          <div style="margin-bottom: 12px; background: #e2e8f0; border-radius: 6px; height: 10px; overflow: hidden; position: relative;" title="Live Budget Utilization">
+            <div id="m3-budgetProgressBar" style="width: 0%; height: 100%; background: #10b981; transition: width 0.3s ease;"></div>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
             <div>
@@ -1836,7 +1906,7 @@
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;" class="control-group">
             <div>
-              <label>100MP Price ($)</label>
+              <label>105MP Price ($)</label>
               <input type="number" id="m3-price100" value="8000" step="100" style="width: 100%;">
             </div>
             <div>
@@ -1921,12 +1991,7 @@
               <label>Platform Rotation Time (s)</label>
               <input type="number" id="m3-rotationTime" value="3.0" step="0.5" style="width: 100%;">
             </div>
-            <div class="control-group" style="margin-top: 10px;">
-              <label style="display: flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; font-size: 11.5px; color: var(--text-dark);">
-                <input type="checkbox" id="m3-rotateGantryInstead" onchange="calculate()">
-                <span>🔄 Rotate Gantry instead of Patient</span>
-              </label>
-            </div>
+
           </div>
         </div>
       </div>
@@ -1936,7 +2001,7 @@
       <div class="panel" style="gap: 16px; min-width: 0;">
         <!-- 3D Visualizer -->
         <div class="preview-panel" style="padding: 16px; min-height: auto; align-items: stretch;">
-          <h2 id="m3-g3d-title" style="text-align: left; width: 100%;">3D Interactive Gantry Simulator (Model 3: Vertical Translating Array)</h2>
+          <h2 id="m3-g3d-title" style="text-align: left; width: 100%;">3D Interactive Gantry Simulator (Model 3: 2D Photography)</h2>
           <div id="g3d-visualizer-placeholder-tab4" style="width: 100%; height: 500px; margin-bottom: 12px; flex-shrink: 0;">
             <!-- Shared g3d-visualizer-wrapper will be dynamically appended here when Tab 4 is active -->
           </div>
@@ -1944,24 +2009,37 @@
 
         <!-- Working Distance Matrix -->
         <div class="section" style="margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
               <h2 style="margin: 0;">Dynamic Sensor Evaluation Matrix (2-4µm, Target: 30 px/mm)</h2>
-              <select id="m3-matrix-sort" onchange="calculate()" style="padding: 4px 8px; border-radius: 4px; border: 1px solid var(--border); font-size: 13px; outline: none; cursor: pointer; display: none;">
-                <option value="wd">Sort by: WD</option>
-              </select>
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <label style="font-size: 11px; font-weight: 600; color: #475569;">Filter:</label>
+                <select id="m3-matrix-filter-budget" onchange="populateOptimizationMatrix('m3-')" style="padding: 3px 6px; font-size: 11px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; font-weight: 500;">
+                  <option value="all">All Budget Statuses</option>
+                  <option value="pass">Within Budget Only (Pass)</option>
+                </select>
+                <select id="m3-matrix-filter-mp" onchange="populateOptimizationMatrix('m3-')" style="padding: 3px 6px; font-size: 11px; border-radius: 4px; border: 1px solid #cbd5e1; background: #fff; font-weight: 500;">
+                  <option value="all">All Resolutions</option>
+                  <option value="50">50 MP Only</option>
+                  <option value="64">64 MP Only</option>
+                  <option value="100">100 MP Only</option>
+                  <option value="127">127 MP Only</option>
+                  <option value="150">150 MP Only</option>
+                </select>
+              </div>
             </div>
             <div style="overflow-x: auto;">
               <table class="data-table" id="m3-matrix-table" style="width: 100%; text-align: center;">
                 <thead>
                   <tr>
-                    <th>Sensor</th>
                     <th>Format</th>
+                    <th>Sensor</th>
                     <th>Pixel Size</th>
-                    <th>Case</th>
-                    <th>Lens & WD</th>
+                    <th>Optimization Case</th>
+                    <th>Lens &amp; WD</th>
                     <th>Density</th>
                     <th>Max FOV</th>
-                    <th>Vertical Cams<br>(per col)</th>
+                    <th>DoF (Depth)</th>
+                    <th>Total Cameras</th>
                     <th>Total Cost</th>
                     <th>Budget Fit</th>
                     <th>Action</th>
@@ -1970,8 +2048,8 @@
               <tbody id="m3-matrix-body">
                 <!-- Dynamically populated -->
               </tbody>
-            </table>
-          </div>
+              </table>
+            </div>
           <div class="analysis-text" style="margin-top: 8px;">
             💡 <i>This matrix recalculates standard lens options and clearances for each working distance to achieve compliance with the target pixel pitch.</i>
           </div>
@@ -1983,7 +2061,7 @@
           <div class="section">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <h2 style="margin: 0; font-size: 15px; color: #1e293b; font-weight: 700;">📊 Coverage Heatmap & Density Profile</h2>
-            <select id="m3-graph-angle" style="padding: 5px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 5px; background: white; cursor: pointer;" onchange="if(typeof render1DDensityGraph === 'function') render1DDensityGraph('m3-')">
+            <select id="m3-graph-angle" style="padding: 5px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 5px; background: white; cursor: pointer;" onchange="if(typeof render1DDensityGraph === 'function') render1DDensityGraph('m3-'); if(typeof renderTopDownDensityMap === 'function') renderTopDownDensityMap('m3-');">
               <option value="0">0° — Front (Width face)</option>
               <option value="90">90° — Side (Depth face)</option>
               <option value="180">180° — Back (Width face)</option>
@@ -2117,8 +2195,11 @@
               <tr><td>Pose Rotations (0°, 90°, 180°, 270°)</td><td>4 poses</td></tr>
               <tr><td>Total Captured Images</td><td><span id="m3-totalCapturedImages" style="font-weight:600;">--</span></td></tr>
               <tr><td>Total Session Time (with Poses)</td><td><span id="m3-totalSessionTime" style="font-weight:600; color:var(--accent);">--</span> s</td></tr>
-              <tr><td>Total Camera Cost</td><td>$<span id="m3-totalCameraCost" style="font-weight:600;">--</span></td></tr>
-              <tr><td>Budget Status</td><td><span id="m3-budgetStatus" class="badge">--</span></td></tr>
+              <tr><td>Configurable Target Budget</td><td>$<span id="m3-budgetTargetDisplay" style="font-weight:600;">100,000</span></td></tr>
+              <tr><td>Total Camera / System Cost</td><td>$<span id="m3-totalCameraCost" style="font-weight:600;">--</span></td></tr>
+              <tr><td>Budget Balance / Remaining</td><td><span id="m3-budgetRemainingDisplay" style="font-weight:600;">--</span></td></tr>
+              <tr><td>Budget Utilization</td><td><span id="m3-budgetUtilDisplay" style="font-weight:600;">--</span></td></tr>
+              <tr><td>Budget Compliance Status</td><td><span id="m3-budgetStatus" class="badge">--</span></td></tr>
             </tbody>
           </table>
           <div class="explanation-box" id="m3-motorExplanation" style="display: none;">--</div>
@@ -2133,6 +2214,6 @@
   
 </div>
 
-<script src="app.js?v=1784296010"></script>
+<script src="app.js?v=1784299050"></script>
 </body>
 </html>
