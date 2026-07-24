@@ -838,10 +838,10 @@ async function exportRFQtoPDF() {
       }
       
       const p50 = parseFloat(document.getElementById(prefix + 'price50')?.value || 6500);
-      const p64 = parseFloat(document.getElementById(prefix + 'price64')?.value || 6500);
-      const p100 = parseFloat(document.getElementById(prefix + 'price100')?.value || 8000);
-      const p127 = parseFloat(document.getElementById(prefix + 'price127')?.value || 12000);
-      const p150 = parseFloat(document.getElementById(prefix + 'price150')?.value || 15000);
+      const p64 = parseFloat(document.getElementById(prefix + 'price64')?.value || 8850);
+      const p100 = parseFloat(document.getElementById(prefix + 'price100')?.value || 16995);
+      const p127 = parseFloat(document.getElementById(prefix + 'price127')?.value || 9500);
+      const p150 = parseFloat(document.getElementById(prefix + 'price150')?.value || 10800);
       const pCustom = parseFloat(document.getElementById(prefix + 'priceCustom')?.value || 6500);
 
       const resPrices = {
@@ -1723,11 +1723,17 @@ function render1DDensityGraph(prefix, actualPxMm, fl = 50) {
 
       
       const avgEnvDensityEl = document.getElementById(prefix + 'avgEnvDensity');
-      if (avgEnvDensityEl) {
+      const lowestEnvDensityEl = document.getElementById(prefix + 'lowestEnvDensity');
+      if (avgEnvDensityEl || lowestEnvDensityEl) {
         const depthMm = patDM2 * 1000;
-        const backDens = currentDensity * (wd / (wd + depthMm));
-        const avgDens = (currentDensity + backDens) / 2;
-        avgEnvDensityEl.textContent = avgDens.toFixed(2);
+        const backWd = wd + (depthMm / 2.0);
+        const frontWd = Math.max(fl + 10, wd - (depthMm / 2.0));
+        const backDens = currentDensity * ((wd - fl) / Math.max(1, backWd - fl));
+        const frontDens = currentDensity * ((wd - fl) / Math.max(1, frontWd - fl));
+        const avgDens = (backDens + frontDens) / 2.0;
+
+        if (avgEnvDensityEl) avgEnvDensityEl.textContent = avgDens.toFixed(2);
+        if (lowestEnvDensityEl) lowestEnvDensityEl.textContent = backDens.toFixed(2);
       }
     }
     
@@ -1773,7 +1779,8 @@ function render1DDensityGraph(prefix, actualPxMm, fl = 50) {
     }
     
     const totalTarget = 100; 
-    const stacks = dof > 0 ? Math.ceil(totalTarget / dof) : 1;
+    const stackOverlap = 0.20; // 20% Z-axis overlap for focus stacking
+    const stacks = dof > 0 ? (totalTarget <= dof ? 1 : Math.ceil((totalTarget - dof) / (dof * (1 - stackOverlap))) + 1) : 1;
     const finalStackSize = (isFinite(stacks) && stacks > 0) ? stacks : 1;
     stackSize.textContent = finalStackSize;
     
@@ -2003,10 +2010,10 @@ function render1DDensityGraph(prefix, actualPxMm, fl = 50) {
     // Update the read-only Active Unit Price field based on chosen sensor preset
     const sensorPresetVal = (sensorPreset ? sensorPreset.value : "custom").toLowerCase();
     const p50 = parseFloat(document.getElementById(prefix + 'price50')?.value || 6500);
-    const p64 = parseFloat(document.getElementById(prefix + 'price64')?.value || 6500);
-    const p100 = parseFloat(document.getElementById(prefix + 'price100')?.value || 8000);
-    const p127 = parseFloat(document.getElementById(prefix + 'price127')?.value || 12000);
-    const p150 = parseFloat(document.getElementById(prefix + 'price150')?.value || 15000);
+    const p64 = parseFloat(document.getElementById(prefix + 'price64')?.value || 8850);
+    const p100 = parseFloat(document.getElementById(prefix + 'price100')?.value || 16995);
+    const p127 = parseFloat(document.getElementById(prefix + 'price127')?.value || 9500);
+    const p150 = parseFloat(document.getElementById(prefix + 'price150')?.value || 10800);
     const pCustom = parseFloat(document.getElementById(prefix + 'priceCustom')?.value || 6500);
 
     let activeUnitPrice = pCustom;
@@ -2763,7 +2770,7 @@ function render1DDensityGraph(prefix, actualPxMm, fl = 50) {
           const elapsedInCycle = virtualEl - (cycleIdx * cycleTime);
           
           if (window.g3dArchitecture === 'model3') {
-            const rotateGantry = document.getElementById('m3-rotateGantryInstead')?.checked || false;
+            const rotateGantry = document.getElementById('m3-rotateGantryInstead') ? document.getElementById('m3-rotateGantryInstead').checked : true;
             if (rotateGantry) {
               if (elapsedInCycle < rotationT * 1000) {
                 const tRot = elapsedInCycle / (rotationT * 1000);
@@ -2882,7 +2889,7 @@ function render1DDensityGraph(prefix, actualPxMm, fl = 50) {
         if (window.g3dArchitecture === 'model2' || window.g3dArchitecture === 'model3') {
           // Model 2 & 3: Straight horizontal line of columns parallel to the scene (X-axis)
           const colZ = -(patD / 2 + wd);
-          const rotateGantry = document.getElementById('m3-rotateGantryInstead')?.checked || false;
+          const rotateGantry = document.getElementById('m3-rotateGantryInstead') ? document.getElementById('m3-rotateGantryInstead').checked : true;
           const angle = (window.g3dArchitecture === 'model2' || (window.g3dArchitecture === 'model3' && rotateGantry)) ? g3dSweepAngle : 0;
           
           const dirX = Math.sin(angle);
